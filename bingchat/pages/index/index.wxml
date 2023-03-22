@@ -1,0 +1,4 @@
+<chat-box bindsuggestSubmit="onSuggestSubmit"></chat-box>
+<view style="bottom:{{InputBottom}}px; border-radius: 20rpx;margin-left: 1.5%;width: 97%;min-height: 88rpx;position: fixed;background-color: #f4f6f8;">
+	<textarea bindfocus="InputFocus" bindblur="InputBlur" model:value="{{content}}" adjust-position="{{false}}" focus="{{false}}" maxlength="2000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder="请输入问题..." style="padding: 10rpx;width: 98%;" disable-default-padding="{{true}}"></textarea>
+</view>

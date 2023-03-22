@@ -1,0 +1,27 @@
+{
+  "appid": "wxee7496be5b68b740",
+  "compileType": "miniprogram",
+  "libVersion": "2.12.3",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "setting": {
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "enhance": true,
+    "packNpmRelationList": [],
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "uglifyFileName": false
+  },
+  "condition": {},
+  "editorSetting": {
+    "tabIndent": "tab",
+    "tabSize": 2
+  }
+}
