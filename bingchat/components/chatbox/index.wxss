@@ -59,13 +59,14 @@
 .suggest-item{
 	background-color: #f4f6f8;
 	display: inline-block;
-	padding: 5rpx 10rpx 5rpx 10rpx;
-	border-radius: 10rpx;
+	padding: 5rpx 8rpx 5rpx 8rpx;
+	border-radius: 8rpx;
 	margin-right: 16rpx;
-	color: rgb(180, 187, 196);
+	color: #b4bbc4;
 	margin-bottom: 10rpx;
-	font-size: 25rpx;
+	font-size: 24rpx;
 }
+
 @keyframes blink {
 	from { display: 1.0; }
 	to { opacity: 0.0; }
@@ -74,4 +75,8 @@
 .blinking {
 	animation: blink 1.5s ease-in-out infinite;
 	display: block;
+}
+
+.suggest-item-hover {
+	color: #ff502c;
 }

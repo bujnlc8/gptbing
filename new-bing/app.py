@@ -70,12 +70,13 @@ async def chat(request):
     text = ''
     suggests = []
     if status == 'Success':
-        if len(res['item']['messages']) >= 2:
-            text = res['item']['messages'][1]['text']
+        item = res['item']['messages']
+        if len(item) >= 2:
+            text = item[1]['text']
             if re.search(r'\[\^\d+\^\]', text):
-                text = res['item']['messages'][1]['adaptiveCards'][0]['body'][0]['text']
+                text = item[1]['adaptiveCards'][0]['body'][0]['text']
             text = re.sub(r'\[\^\d+\^\]', '', text)
-            suggests = [x['text'] for x in res['item']['messages'][1]['suggestedResponses']]
+            suggests = [x['text'] for x in item[1]['suggestedResponses']] if 'suggestedResponses' in item[1] else []
         else:
             text = '抱歉，未搜索到结果，请重试。'
             suggests = [request.json.get('q')]

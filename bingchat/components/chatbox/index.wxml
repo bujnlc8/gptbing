@@ -14,7 +14,7 @@
 					</view>
 				</view>
 				<view class="suggest">
-					<text class="suggest-item" bindtap="suggestSubmit" data-suggest="{{suggest}}" wx:for="{{item.suggests}}" wx:for-item="suggest">{{suggest}}</text>
+					<view hover-class="suggest-item-hover" class="suggest-item" bindtap="suggestSubmit" data-suggest="{{suggest}}" wx:for="{{item.suggests}}" wx:for-item="suggest">{{suggest}}</view>
 				</view>
 			</view>
 		</view>
