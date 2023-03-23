@@ -1,1 +1,1 @@
-export default SERVER_HOST = 'https://example.com';
+export const SERVER_HOST = "https://example.com";

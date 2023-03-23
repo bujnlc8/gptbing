@@ -18,8 +18,11 @@ type GroupMessageHandler struct {
 func (g *GroupMessageHandler) handle(msg *openwechat.Message) error {
 	if msg.IsText() {
 		return g.ReplyText(msg)
+	} else {
+		if strings.Contains(msg.Content, "@GPTBot") || strings.Contains(msg.Content, "@bing") {
+			msg.ReplyText("目前我只支持文字哦~")
+		}
 	}
-	msg.ReplyText("目前我只支持文字哦~")
 	return nil
 }
 
@@ -34,7 +37,7 @@ func (g *GroupMessageHandler) ReplyText(msg *openwechat.Message) error {
 	group := openwechat.Group{User: sender}
 	log.Printf("Received Group %v Text Msg : %v", group.NickName, msg.Content)
 
-        // @GPTBot 或者 @bing的消息才处理
+	// @GPTBot 或者 @bing的消息才处理
 	if !(strings.Contains(msg.Content, "@GPTBot") || strings.Contains(msg.Content, "@bing")) {
 		return nil
 	}
@@ -43,10 +46,12 @@ func (g *GroupMessageHandler) ReplyText(msg *openwechat.Message) error {
 	var reply = ""
 	if strings.Contains(msg.Content, "@bing") {
 		requestText = strings.TrimSpace(strings.ReplaceAll(msg.Content, "@bing", ""))
-		reply, err = gpt.BingSearch(requestText, sender.NickName)
+		reply, err = gpt.BingSearch(requestText, group.UserName)
+		if reply != "" && strings.HasPrefix(reply, "[") {
+			reply = "\n" + reply
+		}
 	} else {
-
-		reply, err = gpt.Completions(requestText)
+		reply, err = gpt.Completions(requestText, group.UserName)
 	}
 	if err != nil {
 		log.Printf("gpt request error: %v \n", err)

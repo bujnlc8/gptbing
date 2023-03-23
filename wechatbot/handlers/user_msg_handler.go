@@ -32,7 +32,7 @@ func NewUserMessageHandler() MessageHandlerInterface {
 func (g *UserMessageHandler) ReplyText(msg *openwechat.Message) error {
 	// 接收私聊消息
 	sender, err := msg.Sender()
-	log.Printf("Received User %v Text Msg : %v", sender.NickName, msg.Content)
+	log.Printf("Received User %v Text Msg : %v", sender.UserName, msg.Content)
 
 	requestText := strings.TrimSpace(msg.Content)
 	requestText = strings.Trim(msg.Content, "\n")
@@ -40,9 +40,9 @@ func (g *UserMessageHandler) ReplyText(msg *openwechat.Message) error {
 	var reply = ""
 	if strings.Contains(msg.Content, "@bing") {
 		requestText = strings.TrimSpace(strings.ReplaceAll(msg.Content, "@bing", ""))
-		reply, err = gpt.BingSearch(requestText, sender.NickName)
+		reply, err = gpt.BingSearch(requestText, sender.UserName)
 	} else {
-		reply, err = gpt.Completions(requestText)
+		reply, err = gpt.Completions(requestText, sender.UserName)
 	}
 	if err != nil {
 		log.Printf("gpt request error: %v \n", err)

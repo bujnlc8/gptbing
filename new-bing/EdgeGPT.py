@@ -272,7 +272,7 @@ class ChatHub:
             "protocol": "json",
             "version": 1
         }))
-        await self.wss.recv()
+        #  await self.wss.recv()
 
     async def close(self):
         """

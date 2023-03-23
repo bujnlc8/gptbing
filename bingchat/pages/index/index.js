@@ -1,4 +1,4 @@
-import SERVER_HOST from "../../config";
+import { SERVER_HOST } from "../../config";
 
 Date.prototype.format = function (fmt) {
   var o = {
@@ -42,7 +42,7 @@ Page({
   },
   InputFocus(e) {
     this.setData({
-      InputBottom: e.detail.height + 2,
+      InputBottom: e.detail.height,
     });
   },
   InputBlur(e) {
@@ -116,7 +116,7 @@ Page({
     }
     wx.request({
       url: SERVER_HOST + "/bing/chat",
-      method: "GET",
+			method: "POST",
       data: {
         q: content,
         t: new Date().getTime(),
@@ -204,7 +204,7 @@ Page({
   },
   submit() {
     var content = this.data.content;
-    if (content.length == 0 || content == null || content.trim().length == 0) {
+    if (content.length == 0 || content.trim().length == 0) {
       return;
     }
     this.submitContent(content);

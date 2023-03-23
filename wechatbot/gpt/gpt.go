@@ -40,13 +40,26 @@ type ChatGPTRequestBody struct {
 	Messages    []Message `json:"messages"`
 }
 
-func Completions(msg string) (string, error) {
+var MessageCacheRegistry = make(map[string][]Message)
+
+func Completions(msg string, nickName string) (string, error) {
+	messageCache := MessageCacheRegistry[nickName]
 	message := Message{Role: "user", Content: msg}
+	if messageCache == nil || len(messageCache) == 0 {
+		messageCache = []Message{message}
+	} else {
+		messageCache = append(messageCache, message)
+		// 只保留10条
+		if len(messageCache) > 10 {
+			messageCache = messageCache[(len(messageCache) - 10):]
+		}
+	}
+	MessageCacheRegistry[nickName] = messageCache
 	requestBody := ChatGPTRequestBody{
 		Model:       "gpt-3.5-turbo",
 		MaxTokens:   2048,
 		Temperature: 0.2,
-		Messages:    []Message{message},
+		Messages:    messageCache,
 	}
 	requestData, err := json.Marshal(requestBody)
 
@@ -73,7 +86,6 @@ func Completions(msg string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	gptResponseBody := &ChatGPTResponseBody{}
 	log.Println(string(body))
 	err = json.Unmarshal(body, gptResponseBody)
@@ -83,6 +95,8 @@ func Completions(msg string) (string, error) {
 	var reply string
 	if len(gptResponseBody.Choices) > 0 {
 		for _, v := range gptResponseBody.Choices {
+			messageCache = append(messageCache, v.Message)
+			MessageCacheRegistry[nickName] = messageCache
 			reply = v.Message.Content
 			break
 		}

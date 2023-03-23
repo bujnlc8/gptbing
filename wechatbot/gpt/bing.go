@@ -1,19 +1,22 @@
 package gpt
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/bujnlc8/wechatbot/config"
 )
 
-type BingQuery struct {
-	Q   string `json:"q"`
-	SID string `json:"sid"`
+const Referer = "https://servicewechat.com/wxee7496be5b68b740"
+
+type BingQueryParam struct {
+	Q         string `json:"q"`
+	SID       string `json:"sid"`
+	AutoReset string `json:"auto_reset"`
 }
 
 type BingResponse struct {
@@ -28,22 +31,25 @@ type BingResponseData struct {
 	Message  string   `json:"message"`
 }
 
-// const BingChatUrl = "http://127.0.0.1:8000/chat"
-
-const Referer = "https://servicewechat.com/wxee7496be5b68b740"
-
 func BingSearch(msg string, nickName string) (string, error) {
-	params := url.Values{}
-	params.Add("q", msg)
-	params.Add("sid", nickName)
-        params.Add("auto_reset", "1")
-	log.Printf("request bing query string : %v", params)
-	BingChatUrl := config.LoadConfig().BingChatUrl
-	req, err := http.NewRequest("GET", BingChatUrl+"?"+params.Encode(), nil)
+	requestBody := BingQueryParam{
+		Q:         msg,
+		SID:       nickName,
+		AutoReset: "1",
+	}
+	requestData, err := json.Marshal(requestBody)
+
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("Referer", Referer)
+	log.Printf("request bing json string : %v", string(requestData))
+	BingChatUrl := config.LoadConfig().BingChatUrl
+	req, err := http.NewRequest("POST", BingChatUrl, bytes.NewBuffer(requestData))
+	if err != nil {
+		return "", err
+	}
+        req.Header.Set("Referer", Referer)
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	response, err := client.Do(req)
 	if err != nil {

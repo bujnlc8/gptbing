@@ -49,19 +49,20 @@ def get_bot(sid):
 
 
 async def do_chat(request):
-    return await get_bot(request.args.get('sid')).ask(
-        request.args.get('q'), conversation_style=ConversationStyle.balanced
+    return await get_bot(request.json.get('sid')).ask(
+        request.json.get('q'), conversation_style=ConversationStyle.balanced
     )
 
 
-@app.route('/chat')
+@app.post('/chat')
 async def chat(request):
     res = await do_chat(request)
-    auto_reset = request.args.get('auto_reset', '')
+    auto_reset = request.json.get('auto_reset', '')
+    sid = request.json.get('sid')
     status = res['item']['result']['value']
     if status == 'Throttled':
         reset_cookie()
-        await get_bot(request.args.get('sid')).reset()
+        await get_bot(sid).reset()
         res = await do_chat(request)
         status = res['item']['result']['value']
     text = ''
@@ -69,17 +70,17 @@ async def chat(request):
     if status == 'Success':
         if len(res['item']['messages']) >= 2:
             text = res['item']['messages'][1]['text']
-            if re.match(r'.*\[\^\d+\^\].*', text):
+            if re.search(r'\[\^\d+\^\]', text):
                 text = res['item']['messages'][1]['adaptiveCards'][0]['body'][0]['text']
-                text = re.sub(r'\[\^\d+\^\]', '', text)
+            text = re.sub(r'\[\^\d+\^\]', '', text)
             suggests = [x['text'] for x in res['item']['messages'][1]['suggestedResponses']]
         else:
             text = '抱歉，未搜索到结果，请重试。'
-            suggests = [request.args.get('q')]
+            suggests = [request.json.get('q')]
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
     # 自动reset
     if auto_reset and ('New topic' in text or 'has expired' in msg):
-        await get_bot(request.args.get('sid')).reset()
+        await get_bot(sid).reset()
     return json({
         'data': {
             'status': status,

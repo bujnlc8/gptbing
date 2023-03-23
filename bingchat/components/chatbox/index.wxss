@@ -21,12 +21,12 @@
   width: 80rpx;
   height: 80rpx;
   border-radius: 50%;
-  background-color: rgb(224, 226, 232)
+  background-color: #e0e2e8;
 }
 
 .dt {
   font-size: 24rpx;
-  color: rgb(180, 187, 196)
+  color: #b4bbc4;
 }
 
 .content {
