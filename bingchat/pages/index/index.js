@@ -48,7 +48,7 @@ Page({
   InputBlur(e) {
     this.setData({
       InputBottom: 24,
-    });
+		});
   },
   processContent(content) {
     return content.replace(/\\n/g, "\n");

@@ -1,3 +1,4 @@
+<wxs src="../../tools.wxs" module="tools" />
 <view wx:if="{{chatList.length == 0}}" style="text-align:center;color: rgb(180, 187, 196);font-size: 28rpx;">输入问题开始和New Bing聊天吧~</view>
 <scroll-view class="chat" scroll-y="true" scroll-into-view="{{scrollId}}" style="height:{{systemInfo.windowHeight - 70}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" enable-flex="{{true}}">
 	<view wx:for="{{chatList}}" wx:key="index" wx:for-item="item" id="{{'item'+index}}">
@@ -5,7 +6,7 @@
 			<image class="avatar" src="{{item.avatarUrl}}" style="display: flex;" bindlongpress="clearChat" data-index="{{index}}"></image>
 			<view class="chat-box" style="margin-left: 20rpx;">
 				<text class="dt">{{item.dt}}</text>
-				<view class="content bg-white" bindlongpress="copyContent" data-index="{{index}}"><view class="{{item.blink ? 'blinking': ''}}">{{item.originContent}}</view></view>
+				<view class="content bg-white" bindlongpress="copyContent" data-index="{{index}}"><view class="{{item.blink ? 'blinking': ''}}"><wemark md="{{item.originContent}}" link="{{false}}" highlight type="wemark" wx:if="{{tools.indexOf(item.originContent, '```') || tools.indexOf(item.originContent, '**')}}"></wemark><view wx:else>{{item.originContent}}</view></view></view>
 				<view  class="suggest" >
 			   <text class="suggest-item" bindtap="suggestSubmit" data-suggest="{{suggest}}" wx:for="{{item.suggests}}" wx:for-item="suggest">{{suggest}}</text>
 			</view>
