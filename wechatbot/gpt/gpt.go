@@ -49,9 +49,9 @@ func Completions(msg string, nickName string) (string, error) {
 		messageCache = []Message{message}
 	} else {
 		messageCache = append(messageCache, message)
-		// 只保留10条
-		if len(messageCache) > 10 {
-			messageCache = messageCache[(len(messageCache) - 10):]
+		// 只保留20条
+		if len(messageCache) > 20 {
+			messageCache = messageCache[(len(messageCache) - 20):]
 		}
 	}
 	MessageCacheRegistry[nickName] = messageCache

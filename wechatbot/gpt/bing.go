@@ -56,7 +56,7 @@ func BingSearch(msg string, nickName string) (string, error) {
 		return "非常抱歉😭，网络异常，请稍后重试", err
 	}
 	if response.StatusCode != 200 {
-		return "非常抱歉😭，网络异常，请稍后重试 [" + string(rune(response.StatusCode)) + "]", nil
+		return "非常抱歉😭，网络异常，请稍后重试 [" + string(response.StatusCode) + "]", nil
 	}
 	defer response.Body.Close()
 

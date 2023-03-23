@@ -23,6 +23,9 @@ func (g *GroupMessageHandler) handle(msg *openwechat.Message) error {
 			msg.ReplyText("目前我只支持文字哦~")
 		}
 	}
+	if msg.IsPaiYiPai() {
+		msg.ReplyText("我是机器人🤖️，会拍坏的哦~")
+	}
 	return nil
 }
 
