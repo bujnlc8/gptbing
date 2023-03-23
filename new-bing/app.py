@@ -26,9 +26,11 @@ def reset_cookie():
         return
     cookie = os.environ.get('COOKIE_FILE')
     if cookie == COOKIE:
-        os.environ['COOKIE_FILE'] = BAK_COOKIE
+        if BAK_COOKIE:
+            os.environ['COOKIE_FILE'] = BAK_COOKIE
     elif cookie == BAK_COOKIE:
-        os.environ['COOKIE_FILE'] = BAK_COOKIE1
+        if BAK_COOKIE1:
+            os.environ['COOKIE_FILE'] = BAK_COOKIE1
     elif cookie == BAK_COOKIE1:
         os.environ['COOKIE_FILE'] = COOKIE
     LOCK.release()
