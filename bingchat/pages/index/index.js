@@ -1,4 +1,14 @@
-import { SERVER_HOST } from "../../config";
+import {
+  SERVER_HOST
+} from "../../config";
+
+const systemInfo = wx.getSystemInfoSync()
+
+function inputPop() {
+	return systemInfo.platform == "ios" || systemInfo.platform == "android"
+}
+
+const initHeight = inputPop() ? 20 : 2
 
 Date.prototype.format = function (fmt) {
   var o = {
@@ -37,18 +47,21 @@ const personAvatar = "../../image/person.jpeg";
 
 Page({
   data: {
-    InputBottom: 24,
+    InputBottom: initHeight,
     content: "",
+    systemInfo: systemInfo
   },
   InputFocus(e) {
-    this.setData({
-      InputBottom: e.detail.height,
-    });
+    if (inputPop()) {
+      this.setData({
+        InputBottom: e.detail.height,
+      });
+    }
   },
   InputBlur(e) {
     this.setData({
-      InputBottom: 24,
-		});
+      InputBottom: initHeight,
+    });
   },
   processContent(content) {
     return content.replace(/\\n/g, "\n");
@@ -70,6 +83,8 @@ Page({
         scrollId: "item" + (cht.data.chatList.length - 2),
       });
     }
+  },
+  onLoad() {
   },
   submitContent: function (content) {
     var that = this;
@@ -116,7 +131,7 @@ Page({
     }
     wx.request({
       url: SERVER_HOST + "/bing/chat",
-			method: "POST",
+      method: "POST",
       data: {
         q: content,
         t: new Date().getTime(),

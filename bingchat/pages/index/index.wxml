@@ -1,5 +1,5 @@
 <chat-box bindsuggestSubmit="onSuggestSubmit"></chat-box>
-<view style="bottom:{{InputBottom}}px; border-radius: 20rpx;margin-left: 1.5%;width: 97%;min-height: 88rpx;position: fixed;background-color: #f4f6f8;display: flex;">
-	<textarea bindfocus="InputFocus" bindblur="InputBlur" model:value="{{content}}" adjust-position="{{false}}" focus="{{false}}" maxlength="2000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder="请输入问题..." style="padding: 10rpx;flex: 8;" disable-default-padding="{{true}}" placeholder-style="color: #b4bbc4"></textarea>
-	<!-- <button style="flex: 1;background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-left: 1px dashed #b4bbc4;border-radius: 0 20rpx 20rpx 0;" bindtap="submit">发送</button> -->
+<view style="bottom:{{InputBottom}}px; border-radius: 20rpx;margin-left: 1.5%;width: 97%;min-height: 100rpx;position: fixed;background-color: #f4f6f8;display: flex;align-items:flex-start;">
+	<textarea bindfocus="InputFocus" bindblur="InputBlur" model:value="{{content}}" adjust-position="{{false}}"  focus="{{false}}" auto-focus="{{!(systemInfo.platform == 'ios' || systemInfo.platform == 'android')}}" maxlength="2000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder="请输入问题..." style="padding: 10rpx;flex: 8;" disable-default-padding="{{true}}" placeholder-style="color: #b4bbc4"></textarea>
+	<button style="flex: 1;background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-left: 1px dashed #b4bbc4;border-radius: 0 20rpx 20rpx 0;" bindtap="submit" wx:if="{{systemInfo.platform != 'ios'}}">发送</button>
 </view>

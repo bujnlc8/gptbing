@@ -12,10 +12,11 @@
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTitleText": "New Bing Bot 🤖",
-    "navigationBarTextStyle": "black"
+		"navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",
   "networkTimeout": {
     "request": 1800000
-	}
+	},
+	"resizable": true
 }

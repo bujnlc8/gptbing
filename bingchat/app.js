@@ -1,7 +1,8 @@
 import { SERVER_HOST } from "config";
 
 App({
-  onShow: function () {},
+  onShow: function () {
+	},
   onLaunch: function () {
     this.getSid();
   },
