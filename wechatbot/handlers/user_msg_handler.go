@@ -20,10 +20,11 @@ func (g *UserMessageHandler) handle(msg *openwechat.Message) error {
 		return g.ReplyText(msg)
 	}
 	if msg.IsSendByFriend() {
-		msg.ReplyText("目前我只支持文字哦~")
-	}
-	if msg.IsPaiYiPai() {
-		msg.ReplyText("我是机器人🤖️，会拍坏的哦~")
+		if msg.IsPaiYiPai() {
+			msg.ReplyText("我是机器人🤖️，会拍坏的哦~")
+		} else {
+			msg.ReplyText("目前我只支持文字哦~")
+		}
 	}
 	return nil
 }

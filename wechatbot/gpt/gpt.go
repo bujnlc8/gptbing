@@ -58,7 +58,7 @@ func Completions(msg string, nickName string) (string, error) {
 	requestBody := ChatGPTRequestBody{
 		Model:       "gpt-3.5-turbo",
 		MaxTokens:   2048,
-		Temperature: 0.2,
+		Temperature: 1.2,
 		Messages:    messageCache,
 	}
 	requestData, err := json.Marshal(requestBody)

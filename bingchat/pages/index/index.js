@@ -49,7 +49,8 @@ Page({
   data: {
     InputBottom: initHeight,
     content: "",
-    systemInfo: systemInfo
+		systemInfo: systemInfo,
+		textareaFocus: false,
   },
   InputFocus(e) {
     if (inputPop()) {
@@ -233,5 +234,11 @@ Page({
   onSuggestSubmit: function (e) {
     var suggest = e.detail.suggest;
     this.submitContent(suggest);
-  },
+	},
+	focus: function(e){
+		console.log(e)
+		this.setData({
+			textareaFocus: true
+		})
+	}
 });

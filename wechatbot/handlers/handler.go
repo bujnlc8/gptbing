@@ -37,7 +37,6 @@ func Handler(msg *openwechat.Message) {
 		handlers[GroupHandler].handle(msg)
 		return
 	}
-
 	// 好友申请
 	if msg.IsFriendAdd() {
 		if config.LoadConfig().AutoPass {
@@ -48,7 +47,6 @@ func Handler(msg *openwechat.Message) {
 			}
 		}
 	}
-
 	// 私聊
 	handlers[UserHandler].handle(msg)
 }

@@ -8,7 +8,7 @@
 				<text class="dt">{{item.dt}}</text>
 				<view class="content bg-white" bindlongpress="copyContent" data-index="{{index}}">
 					<view class="{{item.blink ? 'blinking': ''}}">
-						<wemark md="{{item.originContent}}" link="{{false}}" highlight type="wemark" wx:if="{{tools.indexOf(item.originContent, '```') || tools.indexOf(item.originContent, '**')}}">
+						<wemark md="{{item.originContent}}" link="{{false}}" highlight type="wemark" wx:if="{{tools.indexOf(item.originContent, '`') || tools.indexOf(item.originContent, '**')}}">
 						</wemark>
 						<text user-select decode space wx:else>{{item.originContent}}</text>
 					</view>

@@ -79,4 +79,5 @@
 
 .suggest-item-hover {
 	color: #ff502c;
+	cursor: pointer;
 }
