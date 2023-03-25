@@ -1,6 +1,6 @@
 {
   "component": true,
   "usingComponents": {
-		"wemark": "../wemark/wemark"
+		"mp-html": "mp-html"
 	}
 }

@@ -3,3 +3,4 @@ __pycache__/
 cookie*.json
 env
 config.json
+node_modules/

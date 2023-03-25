@@ -18,5 +18,6 @@
   "networkTimeout": {
     "request": 1800000
 	},
-	"resizable": true
+	"resizable": true,
+	"lazyCodeLoading": "requiredComponents"
 }
