@@ -68,6 +68,7 @@ HEADERS_INIT_CONVER = {
     "upgrade-insecure-requests": "1",
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.69",
     "x-edge-shopping-flag": "1",
+    "x-forwarded-for": FORWARDED_IP,
 }
 
 ssl_context = ssl.create_default_context()
@@ -171,7 +172,12 @@ class Conversation:
     Conversation API
     """
 
-    def __init__(self, cookiePath: str = "", cookies: dict | None = None) -> None:
+    def __init__(
+        self,
+        cookiePath: str = "",
+        cookies: dict | None = None,
+        proxy: str | None = None,
+    ) -> None:
         self.struct: dict = {
             "conversationId": None,
             "clientId": None,
@@ -181,10 +187,11 @@ class Conversation:
                 "message": None
             },
         }
-        self.session = httpx.Client()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-        }, )
+        self.session = httpx.Client(
+            proxies=proxy,
+            timeout=120,
+            headers=HEADERS_INIT_CONVER,
+        )
         if cookies is not None:
             cookie_file = cookies
         else:
@@ -195,17 +202,18 @@ class Conversation:
             cookie_file = json.loads(f)
         for cookie in cookie_file:
             self.session.cookies.set(cookie["name"], cookie["value"])
-        url = "https://edgeservices.bing.com/edgesvc/turing/conversation/create"
+
         # Send GET request
         response = self.session.get(
-            url,
-            timeout=1800,
-            headers=HEADERS_INIT_CONVER,
+            url=os.environ.get("BING_PROXY_URL") or "https://edgeservices.bing.com/edgesvc/turing/conversation/create"
         )
         if response.status_code != 200:
-            print(f"Status code: {response.status_code}")
-            print(response.text)
-            raise Exception("Authentication failed")
+            response = self.session.get("https://edge.churchless.tech/edgesvc/turing/conversation/create")
+            if response.status_code != 200:
+                print(f"Status code: {response.status_code}")
+                print(response.text)
+                print(response.url)
+                raise Exception("Authentication failed")
         try:
             self.struct = response.json()
             if self.struct["result"]["value"] == "UnauthorizedRequest":
@@ -262,7 +270,8 @@ class ChatHub:
                     continue
                 response = json.loads(obj)
                 if response.get("type") == 1 and response["arguments"][0].get("messages", ):
-                    yield False, response["arguments"][0]["messages"][0]["adaptiveCards"][0]["body"][0].get("text")
+                    resp_txt = response["arguments"][0]["messages"][0]["adaptiveCards"][0]["body"][0].get("text")
+                    yield False, resp_txt
                 elif response.get("type") == 2:
                     final = True
                     yield True, response
@@ -272,7 +281,7 @@ class ChatHub:
             "protocol": "json",
             "version": 1
         }))
-        #  await self.wss.recv()
+        await self.wss.recv()
 
     async def close(self):
         """
@@ -287,10 +296,16 @@ class Chatbot:
     Combines everything to make it seamless
     """
 
-    def __init__(self, cookiePath: str = "", cookies: dict | None = None) -> None:
+    def __init__(
+        self,
+        cookiePath: str = "",
+        cookies: dict | None = None,
+        proxy: str | None = None,
+    ) -> None:
         self.cookiePath: str = cookiePath
         self.cookies: dict | None = cookies
-        self.chat_hub: ChatHub = ChatHub(Conversation(self.cookiePath, self.cookies))
+        self.proxy: str | None = proxy
+        self.chat_hub: ChatHub = ChatHub(Conversation(self.cookiePath, self.cookies, self.proxy))
 
     async def ask(
         self,

@@ -236,7 +236,6 @@ Page({
     this.submitContent(suggest);
 	},
 	focus: function(e){
-		console.log(e)
 		this.setData({
 			textareaFocus: true
 		})

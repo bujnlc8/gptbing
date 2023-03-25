@@ -52,7 +52,7 @@ def get_bot(sid):
 
 async def do_chat(request):
     return await get_bot(request.json.get('sid')).ask(
-        request.json.get('q'), conversation_style=ConversationStyle.balanced
+        request.json.get('q'), conversation_style=ConversationStyle.creative
     )
 
 
