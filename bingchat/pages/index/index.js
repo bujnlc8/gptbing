@@ -51,6 +51,7 @@ Page({
     content: "",
     systemInfo: systemInfo,
     textareaFocus: false,
+    searching: false,
   },
   InputFocus(e) {
     if (inputPop()) {
@@ -88,6 +89,17 @@ Page({
   },
   onLoad() {},
   submitContent: function (content) {
+    if (this.data.searching) {
+      wx.showToast({
+        title: '请等待完成',
+        icon: 'error'
+      })
+      return
+    } else {
+      this.setData({
+        searching: true
+      })
+    }
     var that = this;
     const cht = app.globalData.cht;
     that.pushStorageMessage(cht, content, "man", [], false)
@@ -120,7 +132,7 @@ Page({
               robContent = res.data["data"]["text"];
               suggests = res.data["data"]["suggests"];
               if (robContent.indexOf("New topic") != -1) {
-                robContent += "\n发送“重新对话！”开始新的对话";
+                robContent += "\n\n发送“重新对话！”开始新的对话";
                 suggests.push("重新对话！");
                 suggests.push(content);
               }
@@ -146,8 +158,8 @@ Page({
         } catch (error) {
           wx.showToast({
             title: "fatal error",
-					});
-					that.pushStorageMessage(cht, "发生致命错误😱", "rob", [], false, true)
+          });
+          that.pushStorageMessage(cht, "发生致命错误😱", "rob", [], false, true)
         }
       }).catch(e => {
         that.pushStorageMessage(cht, e.errMsg, "rob", [], false, true)
@@ -169,6 +181,11 @@ Page({
     cht.setData({
       chatList: cht.data.chatList,
     });
+    if (role == "rob" && !blink) {
+      this.setData({
+        searching: false
+      })
+    }
     wx.setStorage({
       key: "chatList",
       data: cht.data.chatList,
