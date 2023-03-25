@@ -90,6 +90,8 @@ async def chat(request):
             'text': text,
             'suggests': suggests,
             'message': msg,
+            'num_in_conversation': res['item']['throttling']['numUserMessagesInConversation'] if 'throttling' in
+            res['item'] else -1,
         },
         'cookie': os.environ.get('COOKIE_FILE')
     })

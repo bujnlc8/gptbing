@@ -120,8 +120,9 @@ Page({
         sid: sid,
       }).then(res => {
         try {
-          var robContent = "";
-          var suggests = [];
+          var robContent = ""
+          var suggests = []
+          var num_in_conversation = -1
           if (res.statusCode != 200) {
             robContent =
               "抱歉😭，网络异常，请稍后重试 [" + res.statusCode + "]";
@@ -136,6 +137,7 @@ Page({
                 suggests.push("重新对话！");
                 suggests.push(content);
               }
+              num_in_conversation = res.data["data"]["num_in_conversation"];
             } else {
               if (robContent == "Throttled") {
                 robContent = "这真是愉快，但你已达到每日限制。是否明天再聊？";
@@ -154,7 +156,7 @@ Page({
               }
             }
           }
-          that.pushStorageMessage(cht, robContent, "rob", suggests, false, true)
+          that.pushStorageMessage(cht, robContent, "rob", suggests, false, true, num_in_conversation)
         } catch (error) {
           wx.showToast({
             title: "fatal error",
@@ -166,7 +168,7 @@ Page({
       })
     })
   },
-  pushStorageMessage: function (cht, content, role, suggests, blink, pop) {
+  pushStorageMessage: function (cht, content, role, suggests, blink, pop, num_in_conversation = -1) {
     if (pop) {
       cht.data.chatList.pop();
     }
@@ -177,6 +179,7 @@ Page({
       originContent: this.processContent(content),
       suggests: suggests,
       blink: blink,
+      num_in_conversation: num_in_conversation,
     });
     cht.setData({
       chatList: cht.data.chatList,

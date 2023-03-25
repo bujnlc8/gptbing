@@ -1,3 +1,3 @@
 button::after {
-	border: none;
+  border: none;
 }
