@@ -25,8 +25,7 @@ Component({
       });
     },
     detached() {
-      try {
-      } catch (error) {}
+      try {} catch (error) {}
     },
   },
   data: {
@@ -83,11 +82,9 @@ Component({
     suggestSubmit: function (e) {
       var suggest = e.currentTarget.dataset.suggest;
       this.triggerEvent(
-        "suggestSubmit",
-        {
+        "suggestSubmit", {
           suggest,
-        },
-        {}
+        }, {}
       );
     },
   },

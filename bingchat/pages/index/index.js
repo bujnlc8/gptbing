@@ -1,11 +1,11 @@
 import {
-  SERVER_HOST
+  doRequest
 } from "../../config";
 
 const systemInfo = wx.getSystemInfoSync()
 
 function inputPop() {
-	return systemInfo.platform == "ios" || systemInfo.platform == "android"
+  return systemInfo.platform == "ios" || systemInfo.platform == "android"
 }
 
 const initHeight = inputPop() ? 20 : 2
@@ -49,8 +49,8 @@ Page({
   data: {
     InputBottom: initHeight,
     content: "",
-		systemInfo: systemInfo,
-		textareaFocus: false,
+    systemInfo: systemInfo,
+    textareaFocus: false,
   },
   InputFocus(e) {
     if (inputPop()) {
@@ -67,15 +67,16 @@ Page({
   processContent(content) {
     return content.replace(/\\n/g, "\n");
   },
-  resetConversation: function () {
-    wx.request({
-      url: SERVER_HOST + "/bing/reset",
-      data: {
-        t: new Date().getTime(),
-        sid: app.getSid(),
-      },
-      enableHttp2: true,
-    });
+  resetConversation: function (callback) {
+    app.getSid(sid => {
+      doRequest("/reset", "GET", {
+        sid: sid,
+      }).then(res => {
+        if (callback) {
+          callback(res)
+        }
+      })
+    })
   },
   onShow() {
     const cht = app.globalData.cht;
@@ -85,61 +86,27 @@ Page({
       });
     }
   },
-  onLoad() {
-  },
+  onLoad() {},
   submitContent: function (content) {
     var that = this;
     const cht = app.globalData.cht;
-    content = this.processContent(content);
-    cht.data.chatList.push({
-      type: "man",
-      avatarUrl: personAvatar,
-      dt: getNow(),
-      originContent: content,
-    });
-    cht.setData({
-      chatList: cht.data.chatList,
-    });
+    that.pushStorageMessage(cht, content, "man", [], false)
     that.setData({
       content: "",
     });
     if (content == "重新对话！") {
-      this.resetConversation();
-      cht.data.chatList.push({
-        type: "rob",
-        avatarUrl: robAvatar,
-        dt: getNow(),
-        originContent: "现在我们可以开始新的对话😊",
-        suggests: [],
+      that.resetConversation(() => {
+        that.pushStorageMessage(cht, "现在我们可以开始新的对话😊", "rob", [], false)
       });
-      cht.setData({
-        chatList: cht.data.chatList,
-      });
-      that.scrollTo(cht);
       return;
     } else {
-      cht.data.chatList.push({
-        type: "rob",
-        avatarUrl: robAvatar,
-        dt: getNow(),
-        originContent: "搜索中🔍...",
-        suggests: [],
-        blink: true,
-      });
-      cht.setData({
-        chatList: cht.data.chatList,
-      });
+      that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true)
     }
-    wx.request({
-      url: SERVER_HOST + "/bing/chat",
-      method: "POST",
-      data: {
+    app.getSid(sid => {
+      doRequest("/chat", "POST", {
         q: content,
-        t: new Date().getTime(),
-        sid: app.getSid(),
-      },
-      enableHttp2: true,
-      success(res) {
+        sid: sid,
+      }).then(res => {
         try {
           var robContent = "";
           var suggests = [];
@@ -175,43 +142,37 @@ Page({
               }
             }
           }
-          cht.data.chatList.pop();
-          cht.data.chatList.push({
-            type: "rob",
-            avatarUrl: robAvatar,
-            dt: getNow(),
-            originContent: that.processContent(robContent),
-            suggests: suggests,
-          });
-          cht.setData({
-            chatList: cht.data.chatList,
-          });
-          wx.setStorage({
-            key: "chatList",
-            data: cht.data.chatList,
-          });
+          that.pushStorageMessage(cht, robContent, "rob", suggests, false, true)
         } catch (error) {
-          console.log(error);
           wx.showToast({
             title: "fatal error",
-          });
+					});
+					that.pushStorageMessage(cht, "发生致命错误😱", "rob", [], false, true)
         }
-      },
-      fail(e) {
-        console.log(e);
-        cht.data.chatList.pop();
-        cht.data.chatList.push({
-          type: "rob",
-          avatarUrl: robAvatar,
-          dt: getNow(),
-          originContent: e.errMsg,
-          suggests: [],
-        });
-      },
-    });
-    that.scrollTo(cht);
+      }).catch(e => {
+        that.pushStorageMessage(cht, e.errMsg, "rob", [], false, true)
+      })
+    })
   },
-  scrollTo: function (cht) {
+  pushStorageMessage: function (cht, content, role, suggests, blink, pop) {
+    if (pop) {
+      cht.data.chatList.pop();
+    }
+    cht.data.chatList.push({
+      type: role,
+      avatarUrl: role == "rob" ? robAvatar : personAvatar,
+      dt: getNow(),
+      originContent: this.processContent(content),
+      suggests: suggests,
+      blink: blink,
+    });
+    cht.setData({
+      chatList: cht.data.chatList,
+    });
+    wx.setStorage({
+      key: "chatList",
+      data: cht.data.chatList,
+    });
     setTimeout(() => {
       cht.setData({
         scrollId: "item" + (cht.data.chatList.length - 1),
@@ -234,10 +195,10 @@ Page({
   onSuggestSubmit: function (e) {
     var suggest = e.detail.suggest;
     this.submitContent(suggest);
-	},
-	focus: function(e){
-		this.setData({
-			textareaFocus: true
-		})
-	}
+  },
+  focus: function (e) {
+    this.setData({
+      textareaFocus: true
+    })
+  }
 });
