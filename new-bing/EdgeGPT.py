@@ -255,7 +255,7 @@ class ChatHub:
             extra_headers=HEADERS,
             max_size=None,
             ssl=ssl_context,
-            open_timeout=30,
+            open_timeout=45,
         )
         await self.__initial_handshake()
         # Construct a ChatHub request

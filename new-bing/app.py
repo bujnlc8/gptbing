@@ -56,23 +56,41 @@ async def ws_chat(request, ws):
         logger.warn('Receive data: %s', data)
         sid = data['sid']
         q = data['q']
-        async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle.creative):
-            final, res = response
-            if final:
-                processed_data = await process_data(res, q, sid, auto_reset=1)
-                if processed_data['data']['status'] == 'Throttled':
-                    reset_cookie()
-                    await get_bot(sid).reset()
-                    processed_data['data']['suggests'].append(q)
-                await ws.send(raw_json.dumps({
-                    'final': final,
-                    'data': processed_data
-                }))
-            else:
-                await ws.send(raw_json.dumps({
-                    'final': final,
-                    'data': res
-                }))
+        try:
+            async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle.creative):
+                final, res = response
+                if final:
+                    processed_data = await process_data(res, q, sid, auto_reset=1)
+                    if processed_data['data']['status'] == 'Throttled':
+                        reset_cookie()
+                        await get_bot(sid).reset()
+                        processed_data['data']['suggests'].append(q)
+                    await ws.send(raw_json.dumps({
+                        'final': final,
+                        'data': processed_data
+                    }))
+                else:
+                    await ws.send(raw_json.dumps({
+                        'final': final,
+                        'data': res
+                    }))
+        except Exception as e:
+            logger.error(e)
+            await ws.send(
+                raw_json.dumps({
+                    'final': True,
+                    'data': {
+                        'data': {
+                            'status': 'Error',
+                            'text': str(e),
+                            'suggests': [q],
+                            'message': str(e),
+                            'num_in_conversation': -1,
+                        },
+                        'cookie': os.environ.get('COOKIE_FILE'),
+                    }
+                })
+            )
 
 
 def get_bot(sid):
