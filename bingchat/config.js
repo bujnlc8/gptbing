@@ -1,4 +1,5 @@
 const SERVER_HOST = "https://example.com";
+const SERVER_WSS_HOST = "wss://example.com";
 
 function doRequest(url, method = "GET", data = {}) {
   return new Promise((resolve, reject) => {
@@ -20,5 +21,6 @@ function doRequest(url, method = "GET", data = {}) {
 }
 export {
   doRequest,
-  SERVER_HOST
+  SERVER_HOST,
+  SERVER_WSS_HOST
 }

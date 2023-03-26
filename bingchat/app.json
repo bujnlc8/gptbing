@@ -2,22 +2,20 @@
   "pages": [
     "pages/index/index"
   ],
-  "useExtendedLib": {
-    "weui":true
-  },
   "usingComponents": {
-    "chat-box":"components/chatbox/index"
+    "chat-box": "components/chatbox/index"
   },
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTitleText": "New Bing Bot 🤖",
-		"navigationBarTextStyle": "black"
+    "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",
   "networkTimeout": {
-    "request": 1800000
-	},
-	"resizable": true,
-	"lazyCodeLoading": "requiredComponents"
+    "request": 900000,
+    "connectSocket": 900000
+  },
+  "resizable": true,
+  "lazyCodeLoading": "requiredComponents"
 }

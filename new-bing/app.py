@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import json as raw_json
 import logging
 import os
 import re
@@ -12,6 +13,7 @@ from sanic.response import json
 from EdgeGPT import Chatbot, ConversationStyle
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 APPID = os.environ.get('WXAPPID')
 APPSECRET = os.environ.get('WXAPPSECRET')
@@ -23,6 +25,13 @@ BAK_COOKIE1 = os.environ.get('COOKIE_FILE2', '')
 
 LOCK = threading.Lock()
 BOT_LOCK = threading.Lock()
+bots = {}
+
+app = Sanic('new-bing')
+app.config.REQUEST_TIMEOUT = 900
+app.config.RESPONSE_TIMEOUT = 900
+app.config.WEBSOCKET_PING_INTERVAL = 15
+app.config.WEBSOCKET_PING_TIMEOUT = 15
 
 
 def reset_cookie():
@@ -40,10 +49,30 @@ def reset_cookie():
     LOCK.release()
 
 
-app = Sanic('new-bing')
-app.config.REQUEST_TIMEOUT = 900
-app.config.RESPONSE_TIMEOUT = 900
-bots = {}
+@app.websocket('/chat')
+async def ws_chat(request, ws):
+    while True:
+        data = raw_json.loads(await ws.recv())
+        logger.warn('Receive data: %s', data)
+        sid = data['sid']
+        q = data['q']
+        async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle.creative):
+            final, res = response
+            if final:
+                processed_data = await process_data(res, q, sid, auto_reset=1)
+                if processed_data['data']['status'] == 'Throttled':
+                    reset_cookie()
+                    await get_bot(sid).reset()
+                    processed_data['data']['suggests'].append(q)
+                await ws.send(raw_json.dumps({
+                    'final': final,
+                    'data': processed_data
+                }))
+            else:
+                await ws.send(raw_json.dumps({
+                    'final': final,
+                    'data': res
+                }))
 
 
 def get_bot(sid):
@@ -58,24 +87,16 @@ def get_bot(sid):
 
 
 async def do_chat(request):
+    logger.warn('Request payload: %s', request.json)
     return await get_bot(request.json.get('sid')).ask(
         request.json.get('q'), conversation_style=ConversationStyle.creative
     )
 
 
-@app.post('/chat')
-async def chat(request):
-    res = await do_chat(request)
-    auto_reset = request.json.get('auto_reset', '')
-    sid = request.json.get('sid')
-    status = res['item']['result']['value']
-    if status == 'Throttled':
-        reset_cookie()
-        await get_bot(sid).reset()
-        res = await do_chat(request)
-        status = res['item']['result']['value']
+async def process_data(res, q, sid, auto_reset=None):
     text = ''
     suggests = []
+    status = res['item']['result']['value']
     if status == 'Success':
         item = res['item']['messages']
         if len(item) >= 2:
@@ -89,18 +110,16 @@ async def chat(request):
             text = re.sub(r'\[\^\d+\^\]', '', text)
             suggests = [x['text'] for x in item[1]['suggestedResponses']] if 'suggestedResponses' in item[1] else []
         else:
-            text = '抱歉，未搜索到结果，请重试。'
+            text = '抱歉，未搜索到结果。'
             logger.error('响应异常：%s', res)
-            suggests = [request.json.get('q')]
-            # 结束本轮对话
+            suggests = [q]
             if res['type'] == 2:
                 await get_bot(sid).reset()
-                text = '抱歉，未搜索到结果，已结束本轮对话。'
+                text += '\n\n已结束本轮对话。'
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
-    # 自动reset
     if auto_reset and ('New topic' in text or 'has expired' in msg):
         await get_bot(sid).reset()
-    return json({
+    return {
         'data': {
             'status': status,
             'text': text,
@@ -109,8 +128,22 @@ async def chat(request):
             'num_in_conversation': res['item']['throttling']['numUserMessagesInConversation']
             if 'throttling' in res['item'] else -1,
         },
-        'cookie': os.environ.get('COOKIE_FILE')
-    })
+        'cookie': os.environ.get('COOKIE_FILE'),
+    }
+
+
+@app.post('/chat')
+async def chat(request):
+    res = await do_chat(request)
+    auto_reset = request.json.get('auto_reset', '')
+    sid = request.json.get('sid')
+    data = await process_data(res, request.json.get('q'), sid, auto_reset)
+    if data['data']['status'] == 'Throttled':
+        reset_cookie()
+        await get_bot(sid).reset()
+        res = await do_chat(request)
+        data = await process_data(res, request.json.get('q'), sid, auto_reset)
+    return json(data)
 
 
 @app.route('/reset')
