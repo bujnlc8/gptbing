@@ -100,13 +100,17 @@ async def process_data(res, q, sid, auto_reset=None):
     if status == 'Success':
         item = res['item']['messages']
         if len(item) >= 2:
-            if 'text' not in item[1]:
-                text = '响应异常'
-                logger.error('响应异常：%s', res)
-            else:
-                text = item[1]['text']
-            if re.search(r'\[\^\d+\^\]', text):
-                text = item[1]['adaptiveCards'][0]['body'][0]['text']
+            if 'adaptiveCards' in item[1]:
+                try:
+                    text = item[1]['adaptiveCards'][0]['body'][0]['text']
+                except KeyError:
+                    pass
+            if not text:
+                if 'text' not in item[1]:
+                    text = '响应异常'
+                    logger.error('响应异常：%s', res)
+                else:
+                    text = item[1]['text']
             text = re.sub(r'\[\^\d+\^\]', '', text)
             suggests = [x['text'] for x in item[1]['suggestedResponses']] if 'suggestedResponses' in item[1] else []
         else:

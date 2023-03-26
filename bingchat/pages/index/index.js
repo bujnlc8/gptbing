@@ -9,6 +9,7 @@ function inputPop() {
   return systemInfo.platform == "ios" || systemInfo.platform == "android"
 }
 
+// 各平台对话分离
 var sid_prefix = systemInfo.platform == "ios" || systemInfo.platform == "android" ? "" : systemInfo.platform
 
 const initHeight = inputPop() ? 20 : 5
@@ -195,10 +196,15 @@ Page({
     } else {
       that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true)
     }
-    if (systemInfo.platform == "ios" || systemInfo.platform == "android" || systemInfo.platform == "devtools") {
-      that.sendWSRequest(content)
+    // 经测试，mac 平台下打开debug才能触发websocket的onOpen回调。。。
+    if (systemInfo.platform == "mac") {
+      if (systemInfo.enableDebug) {
+        that.sendWSRequest(content)
+      } else {
+        that.sendHttpRequest(content)
+      }
     } else {
-      that.sendHttpRequest(content)
+      that.sendWSRequest(content)
     }
   },
   pushStorageMessage: function (cht, content, role, suggests, blink, pop, num_in_conversation = -1, final = true) {
@@ -268,17 +274,20 @@ Page({
       }
     })
     socket.onOpen(() => {
-      that.setData({
-        socket: {
-          socket: socket,
-          isOpen: true
-        }
-      })
-      setTimeout(() => {
-        if (callback) {
-          callback()
-        }
-      }, 50)
+      console.log("Socket onOpen", socket)
+      if (socket.readyState == 1) {
+        that.setData({
+          socket: {
+            socket: socket,
+            isOpen: true
+          }
+        })
+        setTimeout(() => {
+          if (callback) {
+            callback()
+          }
+        }, 50)
+      }
     })
     socket.onClose((code, reason) => {
       console.log('Socket onClose', code, reason)
@@ -298,6 +307,9 @@ Page({
           isOpen: false
         },
         searching: false
+      })
+      wx.showToast({
+        title: '网络异常',
       })
     })
     socket.onMessage(data => {
