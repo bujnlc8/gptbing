@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import logging
 import os
 import re
 import threading
@@ -10,11 +11,13 @@ from sanic.response import json
 
 from EdgeGPT import Chatbot, ConversationStyle
 
+logger = logging.getLogger(__name__)
+
 APPID = os.environ.get('WXAPPID')
 APPSECRET = os.environ.get('WXAPPSECRET')
 WX_URL = 'https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code'
-# 备用cookie
 COOKIE = os.environ.get('COOKIE_FILE', '')
+# 备用cookie
 BAK_COOKIE = os.environ.get('COOKIE_FILE1', '')
 BAK_COOKIE1 = os.environ.get('COOKIE_FILE2', '')
 
@@ -76,14 +79,23 @@ async def chat(request):
     if status == 'Success':
         item = res['item']['messages']
         if len(item) >= 2:
-            text = item[1]['text']
+            if 'text' not in item[1]:
+                text = '响应异常'
+                logger.error('响应异常：%s', res)
+            else:
+                text = item[1]['text']
             if re.search(r'\[\^\d+\^\]', text):
                 text = item[1]['adaptiveCards'][0]['body'][0]['text']
             text = re.sub(r'\[\^\d+\^\]', '', text)
             suggests = [x['text'] for x in item[1]['suggestedResponses']] if 'suggestedResponses' in item[1] else []
         else:
             text = '抱歉，未搜索到结果，请重试。'
+            logger.error('响应异常：%s', res)
             suggests = [request.json.get('q')]
+            # 结束本轮对话
+            if res['type'] == 2:
+                await get_bot(sid).reset()
+                text = '抱歉，未搜索到结果，已结束本轮对话。'
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
     # 自动reset
     if auto_reset and ('New topic' in text or 'has expired' in msg):

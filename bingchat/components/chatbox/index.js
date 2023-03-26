@@ -52,7 +52,7 @@ Component({
       var index = e.currentTarget.dataset.index;
       var data = this.data.chatList;
       wx.showModal({
-        content: "是否删除该条记录？",
+        content: "是否删除该条聊天？",
         complete: (res) => {
           if (res.confirm) {
             data.splice(index, 1);
@@ -87,5 +87,22 @@ Component({
         }, {}
       );
     },
+    deletAllChat: function (e) {
+      var that = this
+      wx.showModal({
+        content: "是否删除全部聊天？",
+        complete: (res) => {
+          if (res.confirm) {
+            that.setData({
+              chatList: [],
+            });
+            wx.setStorage({
+              key: "chatList",
+              data: [],
+            });
+          }
+        },
+      });
+    }
   },
 });

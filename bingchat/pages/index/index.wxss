@@ -1,3 +1,8 @@
 button::after {
-  border: none;
+	border: none;
+}
+::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  color: transparent;
 }

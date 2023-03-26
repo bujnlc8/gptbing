@@ -8,7 +8,7 @@ function inputPop() {
   return systemInfo.platform == "ios" || systemInfo.platform == "android"
 }
 
-const initHeight = inputPop() ? 20 : 2
+const initHeight = inputPop() ? 18 : 5
 
 Date.prototype.format = function (fmt) {
   var o = {
@@ -62,7 +62,8 @@ Page({
   },
   InputBlur(e) {
     this.setData({
-      InputBottom: initHeight,
+			InputBottom: initHeight,
+			textareaFocus: false,
     });
   },
   processContent(content) {

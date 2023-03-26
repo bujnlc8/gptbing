@@ -1,12 +1,13 @@
 <!-- <wxs src="../../tools.wxs" module="tools" /> -->
+<view catchlongpress="deletAllChat">
 <view wx:if="{{chatList.length == 0}}" style="text-align:center;color: rgb(180, 187, 196);font-size: 28rpx;">输入问题开始和New Bing聊天吧~</view>
 <scroll-view class="chat" scroll-y="true" scroll-into-view="{{scrollId}}" style="height:{{systemInfo.windowHeight - 70}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" enable-flex="{{true}}">
 	<view wx:for="{{chatList}}" wx:key="index" wx:for-item="item" id="{{'item'+index}}">
 		<view class="chat-item left" wx:if="{{item.type != 'man'}}" id="msg-{{index}}">
-			<image class="avatar" src="{{item.avatarUrl}}" style="display: flex;" bindlongpress="clearChat" data-index="{{index}}"></image>
+			<image class="avatar" src="{{item.avatarUrl}}" style="display: flex;" catchlongpress="clearChat" data-index="{{index}}"></image>
 			<view class="chat-box" style="margin-left: 20rpx;">
 			 <view style="display: flex;flex-direction: row;align-items: center;"><text class="dt" style="flex: 1;">{{item.dt}}</text><view wx:if="{{item.num_in_conversation && item.num_in_conversation != -1}}" style="display:flex;justify-content:flex-end; flex: 1;align-items: center;"><text class="conversation_num">{{item.num_in_conversation}}</text></view></view>
-				<view class="content bg-white" bindlongpress="copyContent" data-index="{{index}}"><view class="{{item.blink ? 'blinking': ''}}"><mp-html content="{{item.originContent}}" preview-img markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}" container-style="margin-top: -1em;"/></view></view>
+				<view class="content bg-white" catchlongpress="copyContent" data-index="{{index}}"><view class="{{item.blink ? 'blinking': ''}}"><mp-html content="{{item.originContent}}" preview-img markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}" container-style="margin-top: -1em;"/></view></view>
 				<view class="suggest">
 					<view hover-class="suggest-item-hover" class="suggest-item" bindtap="suggestSubmit" data-suggest="{{suggest}}" wx:for="{{item.suggests}}" wx:for-item="suggest">{{suggest}}</view>
 				</view>
@@ -15,9 +16,10 @@
 		<view class="chat-item right" wx:if="{{item.type == 'man' }}" id="msg-{{index}}">
 			<view class="chat-box" style="margin-right: 20rpx;">
 				<text class="dt" style="display: block;text-align: right">{{item.dt}}</text>
-				<view class="content bg-green" bindlongpress="copyContent" data-index="{{index}}"><text user-select decode space>{{item.originContent}}</text></view>
+				<view class="content bg-green" catchlongpress="copyContent" data-index="{{index}}"><text user-select decode space>{{item.originContent}}</text></view>
 			</view>
-			<image class="avatar" src="{{item.avatarUrl}}" bindlongpress="clearChat" data-index="{{index}}"></image>
+			<image class="avatar" src="{{item.avatarUrl}}" catchlongpress="clearChat" data-index="{{index}}"></image>
 		</view>
 	</view>
 </scroll-view>
+</view>
