@@ -9,7 +9,9 @@ function inputPop() {
   return systemInfo.platform == "ios" || systemInfo.platform == "android"
 }
 
-const initHeight = inputPop() ? 18 : 5
+var sid_prefix = systemInfo.platform == "ios" || systemInfo.platform == "android" ? "" : systemInfo.platform
+
+const initHeight = inputPop() ? 20 : 5
 
 Date.prototype.format = function (fmt) {
   var o = {
@@ -78,7 +80,7 @@ Page({
   resetConversation: function (callback) {
     app.getSid(sid => {
       doRequest("/reset", "GET", {
-        sid: sid,
+        sid: sid_prefix + sid,
       }).then(res => {
         if (callback) {
           callback(res)
@@ -129,7 +131,7 @@ Page({
     app.getSid(sid => {
       that.sendSocketMessage({
         "q": content,
-        "sid": sid,
+        "sid": sid_prefix + sid,
         "t": new Date().getTime()
       })
     })
@@ -140,7 +142,7 @@ Page({
     app.getSid(sid => {
       doRequest("/chat", "POST", {
         q: content,
-        sid: sid,
+        sid: sid_prefix + sid,
       }).then(res => {
         try {
           var robContent = ""
@@ -193,8 +195,11 @@ Page({
     } else {
       that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true)
     }
-    // that.sendHttpRequest(content)
-    that.sendWSRequest(content)
+    if (systemInfo.platform == "ios" || systemInfo.platform == "android" || systemInfo.platform == "devtools") {
+      that.sendWSRequest(content)
+    } else {
+      that.sendHttpRequest(content)
+    }
   },
   pushStorageMessage: function (cht, content, role, suggests, blink, pop, num_in_conversation = -1, final = true) {
     if (pop) {
@@ -281,7 +286,8 @@ Page({
         socket: {
           socket: null,
           isOpen: false
-        }
+        },
+        searching: false,
       })
     })
     socket.onError(msg => {
@@ -290,7 +296,8 @@ Page({
         socket: {
           socket: null,
           isOpen: false
-        }
+        },
+        searching: false
       })
     })
     socket.onMessage(data => {
