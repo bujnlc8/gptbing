@@ -6,7 +6,7 @@
 			<image class="avatar" src="{{item.avatarUrl}}" style="display: flex;" bindlongpress="clearChat" data-index="{{index}}"></image>
 			<view class="chat-box" style="margin-left: 20rpx;">
 			 <view style="display: flex;flex-direction: row;align-items: center;"><text class="dt" style="flex: 1;">{{item.dt}}</text><view wx:if="{{item.num_in_conversation && item.num_in_conversation != -1}}" style="display:flex;justify-content:flex-end; flex: 1;align-items: center;"><text class="conversation_num">{{item.num_in_conversation}}</text></view></view>
-				<view class="content bg-white" bindlongpress="copyContent" data-index="{{index}}"><view class="{{item.blink ? 'blinking': ''}}"><mp-html content="{{item.originContent}}" preview-img markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}" container-style="margin-top: -1em;margin-bottom:-1em;"/></view></view>
+				<view class="content bg-white" bindlongpress="copyContent" data-index="{{index}}"><view class="{{item.blink ? 'blinking': ''}}"><mp-html content="{{item.originContent}}" preview-img markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}" container-style="margin-top: -1em;"/></view></view>
 				<view class="suggest">
 					<view hover-class="suggest-item-hover" class="suggest-item" bindtap="suggestSubmit" data-suggest="{{suggest}}" wx:for="{{item.suggests}}" wx:for-item="suggest">{{suggest}}</view>
 				</view>
