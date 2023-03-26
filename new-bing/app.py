@@ -19,6 +19,7 @@ BAK_COOKIE = os.environ.get('COOKIE_FILE1', '')
 BAK_COOKIE1 = os.environ.get('COOKIE_FILE2', '')
 
 LOCK = threading.Lock()
+BOT_LOCK = threading.Lock()
 
 
 def reset_cookie():
@@ -43,10 +44,13 @@ bots = {}
 
 
 def get_bot(sid):
+    BOT_LOCK.acquire(timeout=5)
     if sid in bots:
+        BOT_LOCK.release()
         return bots[sid]
     bot = Chatbot()
     bots[sid] = bot
+    BOT_LOCK.release()
     return bot
 
 
@@ -90,8 +94,8 @@ async def chat(request):
             'text': text,
             'suggests': suggests,
             'message': msg,
-            'num_in_conversation': res['item']['throttling']['numUserMessagesInConversation'] if 'throttling' in
-            res['item'] else -1,
+            'num_in_conversation': res['item']['throttling']['numUserMessagesInConversation']
+            if 'throttling' in res['item'] else -1,
         },
         'cookie': os.environ.get('COOKIE_FILE')
     })
@@ -111,4 +115,4 @@ async def openid(request):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, workers=4)
+    app.run(host='0.0.0.0', port=8000)
