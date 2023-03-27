@@ -1,18 +1,16 @@
 import {
   doRequest,
   SERVER_WSS_HOST
-} from "../../config";
+} from "../../config"
 
 const systemInfo = wx.getSystemInfoSync()
+// 各平台对话分离
+const sid_prefix = systemInfo.platform == "ios" || systemInfo.platform == "android" ? "" : systemInfo.platform
+const initHeight = inputPop() ? 20 : 5
 
 function inputPop() {
   return systemInfo.platform == "ios" || systemInfo.platform == "android"
 }
-
-// 各平台对话分离
-var sid_prefix = systemInfo.platform == "ios" || systemInfo.platform == "android" ? "" : systemInfo.platform
-
-const initHeight = inputPop() ? 20 : 5
 
 Date.prototype.format = function (fmt) {
   var o = {
@@ -23,35 +21,35 @@ Date.prototype.format = function (fmt) {
     "s+": this.getSeconds(), //秒
     "q+": Math.floor((this.getMonth() + 3) / 3), //季度
     S: this.getMilliseconds(), //毫秒
-  };
+  }
   if (/(y+)/.test(fmt)) {
     fmt = fmt.replace(
       RegExp.$1,
       (this.getFullYear() + "").substr(4 - RegExp.$1.length)
-    );
+    )
   }
   for (var k in o) {
     if (new RegExp("(" + k + ")").test(fmt)) {
       fmt = fmt.replace(
         RegExp.$1,
         RegExp.$1.length == 1 ? o[k] : ("00" + o[k]).substr(("" + o[k]).length)
-      );
+      )
     }
   }
-  return fmt;
-};
-
-function getNow() {
-  return new Date().format("yyyy-MM-dd hh:mm:ss");
+  return fmt
 }
 
-const app = getApp();
-const robAvatar = "../../image/bing-avatar.png";
-const personAvatar = "../../image/person.jpeg";
+function getNow() {
+  return new Date().format("yyyy-MM-dd hh:mm:ss")
+}
+
+const app = getApp()
+const robAvatar = "../../image/bing-avatar.png"
+const personAvatar = "../../image/person.jpeg"
 
 Page({
   data: {
-    InputBottom: initHeight,
+    inputBottom: initHeight,
     content: "",
     lastContent: "",
     systemInfo: systemInfo,
@@ -62,21 +60,21 @@ Page({
       isOpen: false,
     },
   },
-  InputFocus(e) {
+  inputFocus(e) {
     if (inputPop()) {
       this.setData({
-        InputBottom: e.detail.height,
-      });
+        inputBottom: e.detail.height,
+      })
     }
   },
-  InputBlur(e) {
+  inputBlur(e) {
     this.setData({
-      InputBottom: initHeight,
+      inputBottom: initHeight,
       textareaFocus: false,
-    });
+    })
   },
   processContent(content) {
-    return content.replace(/\\n/g, "\n").replace(/\[\^\d+\^\]/g, "");
+    return content.replace(/\\n/g, "\n").replace(/\[\^\d+\^\]/g, "")
   },
   resetConversation: function (callback) {
     app.getSid(sid => {
@@ -90,38 +88,38 @@ Page({
     })
   },
   onShow() {
-    const cht = app.globalData.cht;
+    const cht = app.globalData.cht
     if (cht.data.chatList.length > 1) {
       cht.setData({
         scrollId: "item" + (cht.data.chatList.length - 2),
-      });
+      })
     }
   },
   onLoad() {},
   processData: function (data, suggests, content) {
-    var robContent = data["data"]["status"];
+    var robContent = data["data"]["status"]
     if (robContent == "Success") {
-      robContent = data["data"]["text"];
-      suggests.push(...data["data"]["suggests"]);
+      robContent = data["data"]["text"]
+      suggests.push(...data["data"]["suggests"])
       if (robContent.indexOf("New topic") != -1) {
-        robContent += "\n\n发送“重新对话！”开始新的对话";
-        suggests.push("重新对话！");
-        suggests.push(content);
+        robContent += "\n\n发送“重新对话！”开始新的对话"
+        suggests.push("重新对话！")
+        suggests.push(content)
       }
     } else {
       if (robContent == "Throttled") {
-        robContent = "这真是愉快，但你已达到每日限制。是否明天再聊？";
-        suggests.push("重新对话！");
-        suggests.push(content);
+        robContent = "这真是愉快，但你已达到每日限制。是否明天再聊？"
+        suggests.push("重新对话！")
+        suggests.push(content)
       } else {
-        var msg = data["data"]["message"];
+        var msg = data["data"]["message"]
         if (msg.indexOf("has expired") != -1) {
-          this.resetConversation();
-          robContent = "本轮对话已过期，请重新开始。";
-          suggests.push(content);
+          this.resetConversation()
+          robContent = "本轮对话已过期，请重新开始。"
+          suggests.push(content)
         } else {
-          robContent = "抱歉😭，发生错误：" + msg + "，请重试";
-          suggests.push(content);
+          robContent = "抱歉😭，发生错误：" + msg
+          suggests.push(content)
         }
       }
     }
@@ -139,7 +137,7 @@ Page({
   },
   sendHttpRequest: function (content) {
     var that = this
-    const cht = app.globalData.cht;
+    const cht = app.globalData.cht
     app.getSid(sid => {
       doRequest("/chat", "POST", {
         q: content,
@@ -151,17 +149,17 @@ Page({
           var num_in_conversation = -1
           if (res.statusCode != 200) {
             robContent =
-              "抱歉😭，网络异常，请稍后重试 [" + res.statusCode + "]";
-            suggests.push(content);
+              "抱歉😭，网络异常，请稍后重试 [" + res.statusCode + "]"
+            suggests.push(content)
           } else {
             robContent = that.processData(res.data, suggests, content)
-            num_in_conversation = res.data["data"]["num_in_conversation"];
+            num_in_conversation = res.data["data"]["num_in_conversation"]
           }
           that.pushStorageMessage(cht, robContent, "rob", suggests, false, true, num_in_conversation)
         } catch (error) {
           wx.showToast({
             title: "fatal error",
-          });
+          })
           that.pushStorageMessage(cht, "发生致命错误😱", "rob", [], false, true)
         }
       }).catch(e => {
@@ -181,36 +179,30 @@ Page({
         searching: true
       })
     }
-    var that = this;
-    const cht = app.globalData.cht;
+    var that = this
+    const cht = app.globalData.cht
     that.pushStorageMessage(cht, content, "man", [], false)
     that.setData({
       content: "",
       lastContent: content,
-    });
+    })
     if (content == "重新对话！") {
       that.resetConversation(() => {
         that.pushStorageMessage(cht, "现在我们可以开始新的对话😊", "rob", [], false)
-      });
-      return;
+      })
+      return
     } else {
       that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true)
     }
-    return that.sendWSRequest(content)
-    // 经测试，mac 平台下打开debug才能触发websocket的onOpen回调。。。
-    if (systemInfo.platform == "mac") {
-      if (systemInfo.enableDebug) {
-        that.sendWSRequest(content)
-      } else {
-        that.sendHttpRequest(content)
-      }
-    } else {
+    if (systemInfo.platform != "windows") {
       that.sendWSRequest(content)
+    } else {
+      that.sendHttpRequest(content)
     }
   },
   pushStorageMessage: function (cht, content, role, suggests, blink, pop, num_in_conversation = -1, final = true) {
     if (pop) {
-      cht.data.chatList.pop();
+      cht.data.chatList.pop()
     }
     cht.data.chatList.push({
       type: role,
@@ -220,10 +212,10 @@ Page({
       suggests: suggests,
       blink: blink,
       num_in_conversation: num_in_conversation,
-    });
+    })
     cht.setData({
       chatList: cht.data.chatList,
-    });
+    })
     if (role == "rob" && !blink && final) {
       this.setData({
         searching: false
@@ -232,29 +224,29 @@ Page({
     wx.setStorage({
       key: "chatList",
       data: cht.data.chatList,
-    });
+    })
     setTimeout(() => {
       cht.setData({
         scrollId: "item" + (cht.data.chatList.length - 1),
-      });
-    }, 50);
+      })
+    }, 50)
   },
   submit() {
-    var content = this.data.content;
+    var content = this.data.content
     if (content.length == 0 || content.trim().length == 0) {
-      return;
+      return
     }
-    this.submitContent(content);
+    this.submitContent(content)
   },
   onShareAppMessage() {
     return {
       title: "New Bing Bot 🤖",
       path: "/pages/index/index",
-    };
+    }
   },
   onSuggestSubmit: function (e) {
-    var suggest = e.detail.suggest;
-    this.submitContent(suggest);
+    var suggest = e.detail.suggest
+    this.submitContent(suggest)
   },
   focus: function (e) {
     this.setData({
@@ -266,6 +258,7 @@ Page({
       return
     }
     var that = this
+    const cht = app.globalData.cht
     const socket = wx.connectSocket({
       url: SERVER_WSS_HOST + "/chat",
       fail: function () {
@@ -299,6 +292,9 @@ Page({
         },
         searching: false,
       })
+      cht.setData({
+        receiveData: false
+      })
     })
     socket.onError(msg => {
       console.log('Socket onError', msg)
@@ -310,20 +306,29 @@ Page({
         searching: false
       })
       wx.showToast({
-        title: '网络错误',
+        title: msg.errMsg,
+      })
+      cht.setData({
+        receiveData: false
       })
     })
     socket.onMessage(data => {
-      const cht = app.globalData.cht;
+      const cht = app.globalData.cht
       var data = JSON.parse(data.data)
       var suggests = []
       var robContent = ''
       var num_in_conversation = -1
       if (!data['final']) {
         robContent = data['data'] + ' ...'
+        cht.setData({
+          receiveData: true
+        })
       } else {
         robContent = that.processData(data['data'], suggests, that.data.lastContent)
         num_in_conversation = data['data']['data']['num_in_conversation']
+        cht.setData({
+          receiveData: false
+        })
       }
       that.pushStorageMessage(cht, robContent, "rob", suggests, false, true, num_in_conversation, data['final'])
     })
@@ -360,5 +365,31 @@ Page({
         reason: "Page Unload"
       })
     }
+  },
+  inputData: function (e) {
+    var that = this
+    var value = e.detail.value
+    that.setData({
+      content: value
+    })
+    // 特定用户在桌面版本下触发提交，因为textarea在桌面版下回车是换行，并且无法监听快捷键输入，只能出此下策
+    if (systemInfo.platform != 'windows' && systemInfo.platform != 'mac') {
+      return
+    }
+    if (value.indexOf("》》》\n") != -1 || value.indexOf(">>>\n") != -1) {
+      that.setData({
+        content: value.replace("》》》\n", "").replace(">>>\n", ""),
+      }, () => {
+        that.submit()
+      })
+    }
+  },
+  onCancelReceive: function (e) {
+    if (this.data.socket.isOpen) {
+      this.data.socket.socket.close({
+        code: 1000,
+        reason: "User cancel"
+      })
+    }
   }
-});
+})

@@ -14,7 +14,7 @@
   "sitemapLocation": "sitemap.json",
   "networkTimeout": {
     "request": 900000,
-    "connectSocket": 900000
+    "connectSocket": 120000
   },
   "resizable": true,
   "lazyCodeLoading": "requiredComponents"

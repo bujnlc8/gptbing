@@ -1,5 +1,5 @@
-const SERVER_HOST = "https://example.com";
-const SERVER_WSS_HOST = "wss://example.com";
+const SERVER_HOST = "https://example.com"
+const SERVER_WSS_HOST = "wss://example.com"
 
 function doRequest(url, method = "GET", data = {}) {
   return new Promise((resolve, reject) => {
