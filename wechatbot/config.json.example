@@ -1,5 +1,5 @@
 {
-  "api_key": "",
-  "auto_pass": true,
-  "bing_chat_url": ""
+  "api_key": "",      # chatgpt api key
+  "auto_pass": true,  # 是否自动通过好友申请
+  "bing_chat_url": "" # New Bing 聊天接口
 }

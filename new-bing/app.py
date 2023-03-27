@@ -49,14 +49,27 @@ def reset_cookie():
     LOCK.release()
 
 
+def make_response_data(status, text, suggests, message, num_in_conversation=-1):
+    return {
+        'data': {
+            'status': status,
+            'text': text,
+            'suggests': suggests,
+            'message': message,
+            'num_in_conversation': num_in_conversation,
+        },
+        'cookie': os.environ.get('COOKIE_FILE'),
+    }
+
+
 @app.websocket('/chat')
-async def ws_chat(request, ws):
+async def ws_chat(_, ws):
     while True:
-        data = raw_json.loads(await ws.recv())
-        logger.warn('Receive data: %s', data)
-        sid = data['sid']
-        q = data['q']
         try:
+            data = raw_json.loads(await ws.recv())
+            logger.warn('Receive data: %s', data)
+            sid = data['sid']
+            q = data['q']
             async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle.creative):
                 final, res = response
                 if final:
@@ -76,21 +89,10 @@ async def ws_chat(request, ws):
                     }))
         except Exception as e:
             logger.error(e)
-            await ws.send(
-                raw_json.dumps({
-                    'final': True,
-                    'data': {
-                        'data': {
-                            'status': 'Error',
-                            'text': str(e),
-                            'suggests': [q],
-                            'message': str(e),
-                            'num_in_conversation': -1,
-                        },
-                        'cookie': os.environ.get('COOKIE_FILE'),
-                    }
-                })
-            )
+            await ws.send(raw_json.dumps({
+                'final': True,
+                'data': make_response_data('Error', str(e), [], str(e))
+            }))
 
 
 def get_bot(sid):
@@ -141,17 +143,10 @@ async def process_data(res, q, sid, auto_reset=None):
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
     if auto_reset and ('New topic' in text or 'has expired' in msg):
         await get_bot(sid).reset()
-    return {
-        'data': {
-            'status': status,
-            'text': text,
-            'suggests': suggests,
-            'message': msg,
-            'num_in_conversation': res['item']['throttling']['numUserMessagesInConversation']
-            if 'throttling' in res['item'] else -1,
-        },
-        'cookie': os.environ.get('COOKIE_FILE'),
-    }
+    return make_response_data(
+        status, text, suggests, msg,
+        res['item']['throttling']['numUserMessagesInConversation'] if 'throttling' in res['item'] else -1
+    )
 
 
 @app.post('/chat')

@@ -319,7 +319,7 @@ Page({
       var robContent = ''
       var num_in_conversation = -1
       if (!data['final']) {
-        robContent = data['data']
+        robContent = data['data'] + ' ...'
       } else {
         robContent = that.processData(data['data'], suggests, that.data.lastContent)
         num_in_conversation = data['data']['data']['num_in_conversation']
