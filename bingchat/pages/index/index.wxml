@@ -1,5 +1,5 @@
 <chat-box bindsuggestSubmit="onSuggestSubmit"></chat-box>
 <view style="bottom:{{InputBottom}}px; border-radius: 20rpx;margin-left: 1.5%;width: 97%;min-height: 100rpx;position: fixed;background-color: #f4f6f8;display: flex;align-items:flex-start; justify-content: space-between;{{textareaFocus ? 'border: 1rpx solid;': ''}}">
 	<textarea bindfocus="InputFocus" bindblur="InputBlur" model:value="{{content}}" adjust-position="{{false}}"  focus="{{textareaFocus}}" maxlength="2000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder="请输入问题..." style="padding: 10rpx;" placeholder-style="color: #b4bbc4" bindtap="focus"></textarea>
-	<view style="background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-radius: 0 20rpx 20rpx 0;height: 100rpx;cursor: pointer;" bindtap="submit" wx:if="{{systemInfo.platform != 'ios'}}"><text style="padding: 10rpx;font-size: 32rpx;cursor: pointer;">发送</text></view>
+	<view style="background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-radius: 0 20rpx 20rpx 0;height: 90rpx;cursor: pointer;margin-right: 15rpx;padding-top:10rpx;font-size: 32rpx;" bindtap="submit" wx:if="{{systemInfo.platform != 'ios'}}">发送</view>
 </view>

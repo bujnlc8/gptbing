@@ -196,6 +196,7 @@ Page({
     } else {
       that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true)
     }
+    return that.sendWSRequest(content)
     // 经测试，mac 平台下打开debug才能触发websocket的onOpen回调。。。
     if (systemInfo.platform == "mac") {
       if (systemInfo.enableDebug) {
@@ -309,7 +310,7 @@ Page({
         searching: false
       })
       wx.showToast({
-        title: '网络异常',
+        title: '网络错误',
       })
     })
     socket.onMessage(data => {
