@@ -80,6 +80,29 @@ Component({
         },
       })
     },
+    renderMd: function (e) {
+      var index = e.currentTarget.dataset.index
+      var data = this.data.chatList[index]
+      var content = data.originContent
+      if (!this.data.chatList[index].content) {
+        var matches = content.match(/```markdown[\s\S]*(```)?/g)
+        if (null != matches) {
+          matches.forEach(m => {
+            var m1 = m.replace('```markdown', '')
+            if (m1.trim().endsWith('```')) {
+              m1 = m1.substring(0, m1.trim().length - 3)
+            }
+            content = content.replace(m, m1)
+          })
+        }
+        data.content = content
+      } else {
+        data.content = null
+      }
+      this.setData({
+        chatList: this.data.chatList
+      })
+    },
     suggestSubmit: function (e) {
       var suggest = e.currentTarget.dataset.suggest
       this.triggerEvent(

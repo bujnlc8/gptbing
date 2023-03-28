@@ -119,6 +119,7 @@ Page({
           suggests.push(content)
         } else {
           robContent = "抱歉😭，发生错误：" + msg
+          suggests.push("重新对话！")
           suggests.push(content)
         }
       }
