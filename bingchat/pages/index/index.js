@@ -194,6 +194,7 @@ Page({
     } else {
       that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true)
     }
+    // windows平台使用http接口
     if (systemInfo.platform != "windows") {
       that.sendWSRequest(content)
     } else {
