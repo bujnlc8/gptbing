@@ -102,7 +102,7 @@ Page({
       robContent = data["data"]["text"]
       suggests.push(...data["data"]["suggests"])
       if (robContent.indexOf("New topic") != -1) {
-        robContent += "\n\n发送“重新对话！”开始新的对话"
+        robContent += "\n发送“重新对话！”开始新的对话"
         suggests.push("重新对话！")
         suggests.push(content)
       }
