@@ -229,7 +229,7 @@ Page({
     })
     setTimeout(() => {
       cht.setData({
-        scrollId: "item" + (cht.data.chatList.length - 1),
+        scrollId: "item" + (cht.data.chatList.length + '9999'),
       })
     }, 50)
   },
@@ -244,6 +244,7 @@ Page({
     return {
       title: "New Bing Bot 🤖",
       path: "/pages/index/index",
+      imageUrl: "../../image/newBing.png"
     }
   },
   onSuggestSubmit: function (e) {
