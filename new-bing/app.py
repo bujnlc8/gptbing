@@ -1,19 +1,17 @@
 # coding=utf-8
 
 import json as raw_json
-import logging
 import os
 import re
 import threading
+from datetime import datetime, timedelta
 
 import requests
 from sanic import Sanic
+from sanic.log import logger
 from sanic.response import json
 
 from EdgeGPT import Chatbot, ConversationStyle
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 APPID = os.environ.get('WXAPPID')
 APPSECRET = os.environ.get('WXAPPSECRET')
@@ -31,7 +29,7 @@ app = Sanic('new-bing')
 app.config.REQUEST_TIMEOUT = 900
 app.config.RESPONSE_TIMEOUT = 900
 app.config.WEBSOCKET_PING_INTERVAL = 15
-app.config.WEBSOCKET_PING_TIMEOUT = 15
+app.config.WEBSOCKET_PING_TIMEOUT = 30
 
 
 def reset_cookie():
@@ -67,7 +65,7 @@ async def ws_chat(_, ws):
     while True:
         try:
             data = raw_json.loads(await ws.recv())
-            logger.warn('Receive data: %s', data)
+            logger.info('Websocket receive data: %s', data)
             sid = data['sid']
             q = data['q']
             async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle.creative):
@@ -96,18 +94,23 @@ async def ws_chat(_, ws):
 
 
 def get_bot(sid):
-    BOT_LOCK.acquire(timeout=5)
+    BOT_LOCK.acquire(timeout=2)
     if sid in bots:
         BOT_LOCK.release()
-        return bots[sid]
+        record = bots[sid]
+        if record['expired'] > datetime.now():
+            return record['bot']
     bot = Chatbot()
-    bots[sid] = bot
+    bots[sid] = {
+        'bot': bot,
+        'expired': datetime.now() + timedelta(hours=5, minutes=55),  # 会话有效期为6小时
+    }
     BOT_LOCK.release()
     return bot
 
 
 async def do_chat(request):
-    logger.warn('Request payload: %s', request.json)
+    logger.info('Http request payload: %s', request.json)
     return await get_bot(request.json.get('sid')).ask(
         request.json.get('q'), conversation_style=ConversationStyle.creative
     )
