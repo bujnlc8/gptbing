@@ -132,6 +132,18 @@ Component({
           }
         },
       })
+    },
+    showOriginContent: function (e) {
+      var index = e.currentTarget.dataset.index
+      var data = this.data.chatList[index]
+      if (data.showOrigin) {
+        data.showOrigin = null
+      } else {
+        data.showOrigin = true
+      }
+      this.setData({
+        chatList: this.data.chatList
+      })
     }
   },
 })
