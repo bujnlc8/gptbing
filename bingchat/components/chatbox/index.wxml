@@ -1,6 +1,6 @@
 <wxs src="../../tools.wxs" module="tools" />
-<view catchlongpress="deletAllChat">
-<view wx:if="{{chatList.length == 0}}" style="text-align:center;color: #b4bbc4;font-size: 32rpx;">输入问题开始和New Bing聊天吧~</view>
+<view catchlongpress="longPress">
+<view wx:if="{{chatList.length == 0}}" style="text-align:center;color: #b4bbc4;font-size: 30rpx;">输入问题开始和New Bing聊天吧~</view>
 <scroll-view class="chat" scroll-y="true" scroll-into-view="{{scrollId}}" style="height:{{systemInfo.windowHeight - 70}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" enable-flex="{{true}}">
 	<view wx:for="{{chatList}}" wx:key="index" wx:for-item="item" id="{{'item'+index}}">
 		<view class="chat-item left" wx:if="{{item.type != 'man'}}" id="msg-{{index}}">
@@ -9,7 +9,7 @@
 			 <view style="display: flex;flex-direction: row;align-items: center;"><text class="dt" style="flex: 1;">{{item.dt}}</text><view wx:if="{{item.num_in_conversation && item.num_in_conversation != -1}}" style="display:flex;justify-content:flex-end; flex: 1;align-items: center;"><text class="conversation_num">{{item.num_in_conversation}}</text></view></view>
 				<view class="content bg-white" catchlongpress="copyContent" data-index="{{index}}" catchtap="{{tools.indexOf(item.originContent, '```markdown') ? 'renderMd': ''}}"><view class="{{item.blink ? 'blinking': ''}}"><mp-html content="{{item.content ? item.content: item.originContent}}" preview-img  selectable="{{true}}" markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}"  use-anchor="{{true}}" scroll-table="{{true}}" container-style="margin-top: -1em;" wx:if="{{!item.showOrigin}}"/><text wx:else user-select="{{true}}" decode="{{true}}">{{item.originContent}}</text></view></view>
 				<view class="suggest">
-					<view hover-class="suggest-item-hover" class="suggest-item" bindtap="suggestSubmit" data-suggest="{{suggest}}"  wx:key="index" wx:for="{{item.suggests}}" wx:for-item="suggest" wx:if="{{suggest && suggest.length > 0}}">{{suggest}}</view>
+					<view hover-class="suggest-item-hover" class="suggest-item" catchtap="suggestSubmit" data-suggest="{{suggest}}"  wx:key="index" wx:for="{{item.suggests}}" wx:for-item="suggest" wx:if="{{suggest && suggest.length > 0}}">{{suggest}}</view>
 				</view>
 			</view>
 		</view>
@@ -23,5 +23,5 @@
 	</view>
 	<view id="{{'item'+ chatList.length + 9999}}" style="margin-top: 2em;"></view>
 </scroll-view>
-<icon wx:if="{{receiveData}}" type="cancel" bindtap="cancelReceive" style="position: absolute;bottom: 140rpx;right:1%;z-index: 10000;" size="20"></icon>
+<icon wx:if="{{receiveData}}" type="cancel" catchtap="cancelReceive" style="position: absolute;bottom: 140rpx;right:1%;z-index: 10000;" size="20"></icon>
 </view>

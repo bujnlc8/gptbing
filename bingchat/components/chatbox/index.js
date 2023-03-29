@@ -85,12 +85,15 @@ Component({
       var data = this.data.chatList[index]
       var content = data.originContent
       if (!this.data.chatList[index].content) {
-        var matches = content.match(/```markdown[\s\S]*(```)?/g)
+        var matches = content.match(/```markdown[\s\S]*```/g)
+        if (null == matches) {
+          matches = content.match(/```markdown[\s\S]*/g)
+        }
         if (null != matches) {
           matches.forEach(m => {
-            var m1 = m.replace('```markdown', '')
-            if (m1.trim().endsWith('```')) {
-              m1 = m1.substring(0, m1.trim().length - 3)
+            var m1 = m.replace('```markdown', '').trim()
+            if (m1.endsWith('```')) {
+              m1 = m1.substring(0, m1.length - 3)
             }
             content = content.replace(m, m1)
           })
@@ -116,7 +119,7 @@ Component({
         "cancelReceive", {}, {}
       )
     },
-    deletAllChat: function (e) {
+    deleteAllChat: function () {
       var that = this
       wx.showModal({
         content: "是否删除全部聊天？",
@@ -131,6 +134,21 @@ Component({
             })
           }
         },
+      })
+    },
+    longPress: function (e) {
+      var that = this
+      wx.showActionSheet({
+        itemList: ['删除全部聊天记录', '切换聊天请求方式'],
+        success(res) {
+          if (res.tapIndex == 0) {
+            that.deleteAllChat()
+          } else if (res.tapIndex == 1) {
+            that.triggerEvent(
+              "switchRequestMethod", {}, {}
+            )
+          }
+        }
       })
     },
     showOriginContent: function (e) {

@@ -6,7 +6,7 @@ import {
 const systemInfo = wx.getSystemInfoSync()
 // 各平台对话分离
 const sid_prefix = systemInfo.platform == "ios" || systemInfo.platform == "android" ? "" : systemInfo.platform
-const initHeight = inputPop() ? 20 : 5
+const initHeight = inputPop() ? 22 : 5
 // 是否使用websocket请求
 var useWebsocket = true
 try {
@@ -410,7 +410,7 @@ Page({
       })
     }
   },
-  swithRequestMethod: function (e) {
+  switchRequestMethod: function (e) {
     var that = this
     if (this.data.useWebsocket) {
       wx.setStorage({
@@ -421,7 +421,7 @@ Page({
             useWebsocket: false
           })
           wx.showToast({
-            title: "已切换成Https接口",
+            title: "已切换成Https",
             icon: "none"
           })
         }
@@ -434,7 +434,7 @@ Page({
             useWebsocket: true
           })
           wx.showToast({
-            title: "已切换成Websocket接口",
+            title: "已切换成Websocket",
             icon: "none"
           })
         }

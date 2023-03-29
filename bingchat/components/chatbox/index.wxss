@@ -35,6 +35,7 @@
   word-break: break-all;
   white-space: pre-wrap;
   margin-top: 10rpx;
+  line-height: 1.65em;
 }
 
 .bg-green {
