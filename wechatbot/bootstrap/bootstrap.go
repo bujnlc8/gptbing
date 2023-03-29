@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/bujnlc8/wechatbot/handlers"
+	"github.com/bujnlc8/wechatbot/utils"
 	"github.com/eatmoreapple/openwechat"
 )
 
@@ -27,5 +28,7 @@ func Run() {
 		}
 	}
 	// 阻塞主goroutine, 直到发生异常或者用户主动退出
-	bot.Block()
+	if err := bot.Block(); err != nil {
+		utils.SendSimpleEmail("[!]wechatbot异常退出", err.Error())
+	}
 }
