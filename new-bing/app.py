@@ -16,10 +16,18 @@ from EdgeGPT import Chatbot, ConversationStyle
 APPID = os.environ.get('WXAPPID')
 APPSECRET = os.environ.get('WXAPPSECRET')
 WX_URL = 'https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code'
-COOKIE = os.environ.get('COOKIE_FILE', '')
-# 备用cookie
-BAK_COOKIE = os.environ.get('COOKIE_FILE1', '')
-BAK_COOKIE1 = os.environ.get('COOKIE_FILE2', '')
+
+# cookie列表, 如果有此环境变量，优先使用
+COOKIE_FILES = raw_json.loads(os.environ.get('COOKIE_FILES', '[]'))
+if COOKIE_FILES:
+    os.environ['COOKIE_FILE'] = COOKIE_FILES[0]
+else:
+    COOKIE = os.environ.get('COOKIE_FILE', '')
+    if not COOKIE:
+        raise ValueError('COOKIE_FILE环境变量为空')
+    BAK_COOKIE = os.environ.get('COOKIE_FILE1', COOKIE)
+    BAK_COOKIE1 = os.environ.get('COOKIE_FILE2', COOKIE)
+    BAK_COOKIE2 = os.environ.get('COOKIE_FILE3', COOKIE)
 
 LOCK = threading.Lock()
 BOT_LOCK = threading.Lock()
@@ -36,14 +44,17 @@ def reset_cookie():
     if not LOCK.acquire(blocking=False):
         return
     cookie = os.environ.get('COOKIE_FILE')
-    if cookie == COOKIE:
-        if BAK_COOKIE:
+    if COOKIE_FILES:
+        os.environ['COOKIE_FILE'] = COOKIE_FILES[(COOKIE_FILES.index(cookie) + 1) % len(COOKIE_FILES)]
+    else:
+        if cookie == COOKIE:
             os.environ['COOKIE_FILE'] = BAK_COOKIE
-    elif cookie == BAK_COOKIE:
-        if BAK_COOKIE1:
+        elif cookie == BAK_COOKIE:
             os.environ['COOKIE_FILE'] = BAK_COOKIE1
-    elif cookie == BAK_COOKIE1:
-        os.environ['COOKIE_FILE'] = COOKIE
+        elif cookie == BAK_COOKIE1:
+            os.environ['COOKIE_FILE'] = BAK_COOKIE2
+        elif cookie == BAK_COOKIE2:
+            os.environ['COOKIE_FILE'] = COOKIE
     LOCK.release()
 
 
