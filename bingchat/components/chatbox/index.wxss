@@ -67,6 +67,7 @@
   color: #b4bbc4;
   margin-bottom: 10rpx;
   font-size: 24rpx;
+  cursor: pointer;
 }
 
 @keyframes blink {
