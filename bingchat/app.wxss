@@ -1,4 +1,5 @@
 page {
   background-color: #fff;
 	font-size: 28rpx;
+	line-height: 1.7em;
 }

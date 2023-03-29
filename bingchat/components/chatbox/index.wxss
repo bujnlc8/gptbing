@@ -63,7 +63,7 @@
   display: inline-block;
   padding: 5rpx 8rpx 5rpx 8rpx;
   border-radius: 8rpx;
-  margin-right: 16rpx;
+  margin-right: 10rpx;
   color: #b4bbc4;
   margin-bottom: 10rpx;
   font-size: 24rpx;

@@ -7,6 +7,16 @@ const systemInfo = wx.getSystemInfoSync()
 // 各平台对话分离
 const sid_prefix = systemInfo.platform == "ios" || systemInfo.platform == "android" ? "" : systemInfo.platform
 const initHeight = inputPop() ? 20 : 5
+// 是否使用websocket请求
+var useWebsocket = true
+try {
+  var notuseWebsocket = wx.getStorageSync("notuseWebsocket")
+  if (notuseWebsocket) {
+    useWebsocket = false
+  }
+} catch (e) {
+  useWebsocket = true
+}
 
 function inputPop() {
   return systemInfo.platform == "ios" || systemInfo.platform == "android"
@@ -59,6 +69,7 @@ Page({
       socket: null,
       isOpen: false,
     },
+    useWebsocket: useWebsocket,
   },
   inputFocus(e) {
     if (inputPop()) {
@@ -160,6 +171,7 @@ Page({
         } catch (error) {
           wx.showToast({
             title: "fatal error",
+            icon: "error"
           })
           that.pushStorageMessage(cht, "发生致命错误😱", "rob", [], false, true)
         }
@@ -171,8 +183,8 @@ Page({
   submitContent: function (content) {
     if (this.data.searching) {
       wx.showToast({
-        title: '请等待完成',
-        icon: 'error'
+        title: "请等待完成",
+        icon: "error"
       })
       return
     } else {
@@ -195,8 +207,7 @@ Page({
     } else {
       that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true)
     }
-    // windows平台使用http接口
-    if (systemInfo.platform != "windows") {
+    if (that.data.useWebsocket) {
       that.sendWSRequest(content)
     } else {
       that.sendHttpRequest(content)
@@ -229,7 +240,7 @@ Page({
     })
     setTimeout(() => {
       cht.setData({
-        scrollId: "item" + (cht.data.chatList.length + '9999'),
+        scrollId: "item" + (cht.data.chatList.length + "9999"),
       })
     }, 50)
   },
@@ -266,7 +277,8 @@ Page({
       url: SERVER_WSS_HOST + "/chat",
       fail: function () {
         wx.showToast({
-          title: '打开websocket失败',
+          title: "打开websocket失败",
+          icon: "none",
         })
       }
     })
@@ -287,7 +299,7 @@ Page({
       }
     })
     socket.onClose((code, reason) => {
-      console.log('Socket onClose', code, reason)
+      console.log("Socket onClose", code, reason)
       that.setData({
         socket: {
           socket: null,
@@ -300,7 +312,7 @@ Page({
       })
     })
     socket.onError(msg => {
-      console.log('Socket onError', msg)
+      console.log("Socket onError", msg)
       that.setData({
         socket: {
           socket: null,
@@ -309,7 +321,8 @@ Page({
         searching: false
       })
       wx.showToast({
-        title: msg.errMsg,
+        title: "网络异常 " + msg.errMsg,
+        icon: "none",
       })
       cht.setData({
         receiveData: false
@@ -319,21 +332,21 @@ Page({
       const cht = app.globalData.cht
       var data = JSON.parse(data.data)
       var suggests = []
-      var robContent = ''
+      var robContent = ""
       var num_in_conversation = -1
-      if (!data['final']) {
-        robContent = data['data'] + ' ...'
+      if (!data["final"]) {
+        robContent = data["data"] + " ..."
         cht.setData({
           receiveData: true
         })
       } else {
-        robContent = that.processData(data['data'], suggests, that.data.lastContent)
-        num_in_conversation = data['data']['data']['num_in_conversation']
+        robContent = that.processData(data["data"], suggests, that.data.lastContent)
+        num_in_conversation = data["data"]["data"]["num_in_conversation"]
         cht.setData({
           receiveData: false
         })
       }
-      that.pushStorageMessage(cht, robContent, "rob", suggests, false, true, num_in_conversation, data['final'])
+      that.pushStorageMessage(cht, robContent, "rob", suggests, false, true, num_in_conversation, data["final"])
     })
   },
   sendSocketMessage: function (data) {
@@ -344,7 +357,8 @@ Page({
           fail: err => {
             console.log(err)
             wx.showToast({
-              title: '消息发送失败',
+              title: "消息发送失败",
+              icon: "error",
             })
           }
         })
@@ -355,7 +369,8 @@ Page({
         fail: err => {
           console.log(err)
           wx.showToast({
-            title: '消息发送失败',
+            title: "消息发送失败",
+            icon: "error",
           })
         }
       })
@@ -376,7 +391,7 @@ Page({
       content: value
     })
     // 特定用户在桌面版本下触发提交，因为textarea在桌面版下回车是换行，并且无法监听快捷键输入，只能出此下策
-    if (systemInfo.platform != 'windows' && systemInfo.platform != 'mac') {
+    if (systemInfo.platform != "windows" && systemInfo.platform != "mac") {
       return
     }
     if (value.indexOf("》》》\n") != -1 || value.indexOf(">>>\n") != -1) {
@@ -392,6 +407,37 @@ Page({
       this.data.socket.socket.close({
         code: 1000,
         reason: "User cancel"
+      })
+    }
+  },
+  swithRequestMethod: function (e) {
+    var that = this
+    if (this.data.useWebsocket) {
+      wx.setStorage({
+        key: "notuseWebsocket",
+        data: 1,
+        success: (res) => {
+          that.setData({
+            useWebsocket: false
+          })
+          wx.showToast({
+            title: "已切换成Https接口",
+            icon: "none"
+          })
+        }
+      })
+    } else {
+      wx.removeStorage({
+        key: "notuseWebsocket",
+        success: (res) => {
+          that.setData({
+            useWebsocket: true
+          })
+          wx.showToast({
+            title: "已切换成Websocket接口",
+            icon: "none"
+          })
+        }
       })
     }
   }

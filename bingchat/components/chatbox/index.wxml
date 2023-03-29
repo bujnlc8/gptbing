@@ -21,7 +21,7 @@
 			<image class="avatar" src="{{item.avatarUrl}}" catchlongpress="clearChat" data-index="{{index}}"></image>
 		</view>
 	</view>
-	<view id="{{'item'+ chatList.length + 9999}}" ></view>
+	<view id="{{'item'+ chatList.length + 9999}}" style="margin-top: 2em;"></view>
 </scroll-view>
 <icon wx:if="{{receiveData}}" type="cancel" bindtap="cancelReceive" style="position: absolute;bottom: 140rpx;right:1%;z-index: 10000;" size="20"></icon>
 </view>
