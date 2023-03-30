@@ -30,7 +30,6 @@ else:
     BAK_COOKIE2 = os.environ.get('COOKIE_FILE3', COOKIE)
 
 LOCK = threading.Lock()
-BOT_LOCK = threading.Lock()
 bots = {}
 
 app = Sanic('new-bing')
@@ -85,7 +84,7 @@ async def ws_chat(_, ws):
                     processed_data = await process_data(res, q, sid, auto_reset=1)
                     if processed_data['data']['status'] == 'Throttled':
                         reset_cookie()
-                        await get_bot(sid).reset()
+                        await reset_conversation(sid)
                         processed_data['data']['suggests'].append(q)
                     await ws.send(raw_json.dumps({
                         'final': final,
@@ -105,9 +104,7 @@ async def ws_chat(_, ws):
 
 
 def get_bot(sid):
-    BOT_LOCK.acquire(timeout=2)
     if sid in bots:
-        BOT_LOCK.release()
         record = bots[sid]
         if record['expired'] > datetime.now():
             return record['bot']
@@ -116,8 +113,12 @@ def get_bot(sid):
         'bot': bot,
         'expired': datetime.now() + timedelta(hours=5, minutes=55),  # 会话有效期为6小时
     }
-    BOT_LOCK.release()
     return bot
+
+
+async def reset_conversation(sid):
+    await get_bot(sid).reset()
+    bots[sid]['expired'] = datetime.now() + timedelta(hours=5, minutes=55)
 
 
 async def do_chat(request):
@@ -152,11 +153,11 @@ async def process_data(res, q, sid, auto_reset=None):
             logger.error('响应异常：%s', res)
             suggests = [q]
             if res['type'] == 2:
-                await get_bot(sid).reset()
-                text += '\n\n已结束本轮对话。'
+                await reset_conversation(sid)
+                text += '\n已结束本轮对话。'
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
     if auto_reset and ('New topic' in text or 'has expired' in msg):
-        await get_bot(sid).reset()
+        await reset_conversation(sid)
     return make_response_data(
         status, text, suggests, msg,
         res['item']['throttling']['numUserMessagesInConversation'] if 'throttling' in res['item'] else -1
@@ -171,7 +172,7 @@ async def chat(request):
     data = await process_data(res, request.json.get('q'), sid, auto_reset)
     if data['data']['status'] == 'Throttled':
         reset_cookie()
-        await get_bot(sid).reset()
+        await reset_conversation(sid)
         res = await do_chat(request)
         data = await process_data(res, request.json.get('q'), sid, auto_reset)
     return json(data)
@@ -179,7 +180,7 @@ async def chat(request):
 
 @app.route('/reset')
 async def reset(request):
-    await get_bot(request.args.get('sid')).reset()
+    await reset_conversation(request.args.get('sid'))
     return json({'data': ''})
 
 

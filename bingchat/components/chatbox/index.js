@@ -31,6 +31,7 @@ Component({
   data: {
     chatList: [],
     receiveData: false,
+    autoIncrConversation: 1,
   },
   methods: {
     initMessageHistory() {

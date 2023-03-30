@@ -21,6 +21,8 @@ try {
 function inputPop() {
   return systemInfo.platform == "ios" || systemInfo.platform == "android"
 }
+// 自增对话
+var autoIncrConversation = 0
 
 Date.prototype.format = function (fmt) {
   var o = {
@@ -226,8 +228,10 @@ Page({
       blink: blink,
       num_in_conversation: num_in_conversation,
     })
+    autoIncrConversation += 1
     cht.setData({
       chatList: cht.data.chatList,
+      autoIncrConversation: autoIncrConversation,
     })
     if (role == "rob" && !blink && final) {
       this.setData({
@@ -240,9 +244,9 @@ Page({
     })
     setTimeout(() => {
       cht.setData({
-        scrollId: "item" + (cht.data.chatList.length + "9999"),
+        scrollId: "item" + (autoIncrConversation + "9999"),
       })
-    }, 50)
+    }, 100)
   },
   submit() {
     var content = this.data.content

@@ -1,7 +1,7 @@
 <wxs src="../../tools.wxs" module="tools" />
 <view catchlongpress="longPress">
 <view wx:if="{{chatList.length == 0}}" style="text-align:center;color: #b4bbc4;font-size: 30rpx;">输入问题开始和New Bing聊天吧~</view>
-<scroll-view class="chat" scroll-y="true" scroll-into-view="{{scrollId}}" style="height:{{systemInfo.windowHeight - 70}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" enable-flex="{{true}}">
+<scroll-view class="chat" scroll-y="{{true}}" scroll-into-view="{{scrollId}}" style="height:{{systemInfo.windowHeight - 70}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" enable-passive="{{true}}" show-scrollbar="{{false}}">
 	<view wx:for="{{chatList}}" wx:key="index" wx:for-item="item" id="{{'item'+index}}">
 		<view class="chat-item left" wx:if="{{item.type != 'man'}}" id="msg-{{index}}">
 			<image class="avatar" src="{{item.avatarUrl}}" style="display: flex;" catchlongpress="clearChat" data-index="{{index}}" catchtap="showOriginContent" data-index="{{index}}"></image>
@@ -21,7 +21,7 @@
 			<image class="avatar" src="{{item.avatarUrl}}" catchlongpress="clearChat" data-index="{{index}}"></image>
 		</view>
 	</view>
-	<view id="{{'item'+ chatList.length + 9999}}" style="margin-top: 2em;"></view>
+	<view id="{{'item'+ autoIncrConversation + 9999}}" style="height: 1em;"></view>
 </scroll-view>
-<icon wx:if="{{receiveData}}" type="cancel" catchtap="cancelReceive" style="position: absolute;bottom: 140rpx;right:1%;z-index: 10000;" size="20"></icon>
+<icon wx:if="{{receiveData}}" type="cancel" catchtap="cancelReceive" style="position: absolute;bottom: 142rpx;right:1%;z-index: 10000;" size="20"></icon>
 </view>
