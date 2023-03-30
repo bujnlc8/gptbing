@@ -42,6 +42,7 @@ Component({
     receiveData: false,
     autoIncrConversation: 1,
     closeShareOnCopy: closeShareOnCopy,
+    showShare: false,
   },
   methods: {
     initMessageHistory() {
@@ -91,28 +92,17 @@ Component({
           })
           if (that.data.chatList[index]["type"] == "man" && !that.data.closeShareOnCopy) {
             setTimeout(() => {
-              wx.showModal({
-                title: "提示",
-                content: "是否分享搜索内容？",
-                complete: (res) => {
-                  if (res.confirm) {
-                    wx.setStorage({
-                      key: "shareContent",
-                      data: {
-                        q: content,
-                        validTime: new Date().getTime() + 300 * 1000
-                      },
-                      success: (res) => {
-                        wx.showToast({
-                          title: "请点击右上角分享按钮",
-                          icon: "none"
-                        })
-                      }
-                    })
-                  }
+              that.setData({
+                showShare: true
+              })
+              wx.setStorage({
+                key: "shareContent",
+                data: {
+                  q: content,
+                  validTime: new Date().getTime() + 300 * 1000
                 }
               })
-            }, 1500)
+            }, 1200)
           }
         }
       })
@@ -223,6 +213,16 @@ Component({
       }
       this.setData({
         chatList: this.data.chatList
+      })
+    },
+    onPopButtonClick: function (e) {
+      if (e.detail.t !== "confirm") {
+        wx.removeStorage({
+          key: 'shareContent',
+        })
+      }
+      this.setData({
+        showShare: false
       })
     }
   },

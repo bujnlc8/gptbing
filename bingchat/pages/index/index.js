@@ -72,6 +72,8 @@ Page({
       isOpen: false,
     },
     useWebsocket: useWebsocket,
+    showSearchPop: false,
+    searchPopMessage: "",
   },
   inputFocus(e) {
     if (inputPop()) {
@@ -100,22 +102,28 @@ Page({
       })
     })
   },
-  onShow() {
+  getOptions: function () {
     var pages = getCurrentPages()
     var currentPage = pages[pages.length - 1]
-    var options = currentPage.options
-    var that = this
+    return currentPage.options
+  },
+  onPopButtonClick: function (e) {
+    if (e.detail.t === "confirm") {
+      this.submitContent(e.currentTarget.dataset.q)
+    }
+    this.setData({
+      showSearchPop: false,
+      q: ""
+    })
+  },
+  onShow() {
+    var options = this.getOptions()
     if (options && options["q"]) {
       var q = decodeURIComponent(options["q"])
-      wx.showModal({
-        title: "提示",
-        content: "即将搜索“" + q + "” ?",
-        success(res) {
-          if (res.confirm) {
-            options["q"] = null
-            that.submitContent(q)
-          }
-        }
+      this.setData({
+        searchPopMessage: "即将搜索“" + q + "”",
+        showSearchPop: true,
+        q: q,
       })
     }
     const cht = app.globalData.cht

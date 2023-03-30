@@ -1,0 +1,8 @@
+<view class="sharePop">
+	<view class="title">{{title}}</view>
+	<view class="message">{{message}}</view>
+	<view class="bt-wrap">
+		<button bindtap="closePop" style="color: gray;" data-t="cancel" class="bt" hover-class="btn-click">{{cancelText}}</button>
+		<button open-type="{{openType}}" bindtap="closePop" data-t="confirm" class="bt" style="color: #161823;" hover-class="btn-click">{{confirmText}}</button>
+	</view>
+</view>
