@@ -101,6 +101,23 @@ Page({
     })
   },
   onShow() {
+    var pages = getCurrentPages()
+    var currentPage = pages[pages.length - 1]
+    var options = currentPage.options
+    var that = this
+    if (options && options["q"]) {
+      var q = decodeURIComponent(options["q"])
+      wx.showModal({
+        title: "提示",
+        content: "即将搜索“" + q + "” ?",
+        success(res) {
+          if (res.confirm) {
+            options["q"] = null
+            that.submitContent(q)
+          }
+        }
+      })
+    }
     const cht = app.globalData.cht
     if (cht.data.chatList.length > 1) {
       cht.setData({
@@ -256,9 +273,25 @@ Page({
     this.submitContent(content)
   },
   onShareAppMessage() {
+    var title = "New Bing Bot 🤖"
+    var content = this.data.content.trim()
+    if (content.length > 0) {
+      title = content
+    } else {
+      var cache = wx.getStorageSync("shareContent")
+      if (cache) {
+        if (cache["validTime"] > (new Date()).getTime()) {
+          content = cache["q"]
+          title = content
+          wx.removeStorage({
+            key: "shareContent",
+          })
+        }
+      }
+    }
     return {
-      title: "New Bing Bot 🤖",
-      path: "/pages/index/index",
+      title: title,
+      path: "/pages/index/index?q=" + encodeURIComponent(content),
       imageUrl: "../../image/newBing.png"
     }
   },

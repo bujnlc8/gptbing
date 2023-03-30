@@ -1,7 +1,7 @@
 <wxs src="../../tools.wxs" module="tools" />
 <view catchlongpress="longPress">
 <view wx:if="{{chatList.length == 0}}" style="text-align:center;color: #b4bbc4;font-size: 30rpx;">输入问题开始和New Bing聊天吧~</view>
-<scroll-view class="chat" scroll-y="{{true}}" scroll-into-view="{{scrollId}}" style="height:{{systemInfo.windowHeight - 70}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" enable-passive="{{true}}" show-scrollbar="{{false}}">
+<scroll-view class="chat" scroll-y="{{true}}" scroll-into-view="{{scrollId}}" style="height:{{systemInfo.windowHeight - 70}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" enable-passive="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}">
 	<view wx:for="{{chatList}}" wx:key="index" wx:for-item="item" id="{{'item'+index}}">
 		<view class="chat-item left" wx:if="{{item.type != 'man'}}" id="msg-{{index}}">
 			<image class="avatar" src="{{item.avatarUrl}}" style="display: flex;" catchlongpress="clearChat" data-index="{{index}}" catchtap="showOriginContent" data-index="{{index}}"></image>
