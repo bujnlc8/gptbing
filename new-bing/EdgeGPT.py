@@ -1,6 +1,3 @@
-"""
-Main.py
-"""
 from __future__ import annotations
 
 import asyncio
@@ -10,10 +7,7 @@ import random
 import ssl
 import uuid
 from enum import Enum
-from typing import Generator
-from typing import Literal
-from typing import Optional
-from typing import Union
+from typing import Generator, Literal, Optional, Union
 
 import certifi
 import httpx
@@ -68,7 +62,7 @@ HEADERS_INIT_CONVER = {
     "upgrade-insecure-requests": "1",
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.69",
     "x-edge-shopping-flag": "1",
-    "x-forwarded-for": FORWARDED_IP,
+    "x-forwarded-for": "1.1.1.1",
 }
 
 ssl_context = ssl.create_default_context()
@@ -94,6 +88,13 @@ def append_identifier(msg: dict) -> str:
     """
     # Convert dict to json string
     return json.dumps(msg) + DELIMITER
+
+
+def getRanHex(length: int = 32) -> str:
+    """
+    Returns random hex string
+    """
+    return "".join(random.choice("0123456789abcdef") for i in range(length))
 
 
 class ChatHubRequest:
@@ -135,17 +136,28 @@ class ChatHubRequest:
             if not isinstance(conversation_style, ConversationStyle):
                 conversation_style = getattr(ConversationStyle, conversation_style)
             options = [
+                "nlu_direct_response_filter",
                 "deepleo",
-                "enable_debug_commands",
                 "disable_emoji_spoken_text",
+                "responsible_ai_policy_235",
                 "enablemm",
                 conversation_style.value,
+                "dtappid",
+                "cricinfo",
+                "cricinfov2",
+                "dv3sugg",
             ]
         self.struct = {
             "arguments": [
                 {
                     "source": "cib",
                     "optionsSets": options,
+                    "sliceIds": [
+                        "222dtappid",
+                        "225cricinfo",
+                        "224locals0",
+                    ],
+                    "traceId": getRanHex(32),
                     "isStartOfSession": self.invocation_id == 0,
                     "message": {
                         "author": "user",
@@ -241,6 +253,7 @@ class ChatHub:
     async def ask_stream(
         self,
         prompt: str,
+        wss_link: str,
         conversation_style: CONVERSATION_STYLE_TYPE = None,
     ) -> Generator[str, None, None]:
         """
@@ -251,7 +264,7 @@ class ChatHub:
                 await self.wss.close()
         # Check if websocket is closed
         self.wss = await websockets.connect(
-            "wss://sydney.bing.com/sydney/ChatHub",
+            wss_link,
             extra_headers=HEADERS,
             max_size=None,
             ssl=ssl_context,
@@ -275,6 +288,8 @@ class ChatHub:
                 elif response.get("type") == 2:
                     final = True
                     yield True, response
+                else:
+                    print(response)
 
     async def __initial_handshake(self):
         await self.wss.send(append_identifier({
@@ -310,6 +325,7 @@ class Chatbot:
     async def ask(
         self,
         prompt: str,
+        wss_link: str = "wss://sydney.bing.com/sydney/ChatHub",
         conversation_style: CONVERSATION_STYLE_TYPE = None,
     ) -> dict:
         """
@@ -318,14 +334,16 @@ class Chatbot:
         async for final, response in self.chat_hub.ask_stream(
                 prompt=prompt,
                 conversation_style=conversation_style,
+                wss_link=wss_link,
         ):
             if final:
                 return response
-        self.chat_hub.wss.close()
+        await self.chat_hub.wss.close()
 
     async def ask_stream(
         self,
         prompt: str,
+        wss_link: str = "wss://sydney.bing.com/sydney/ChatHub",
         conversation_style: CONVERSATION_STYLE_TYPE = None,
     ) -> Generator[str, None, None]:
         """
@@ -334,6 +352,7 @@ class Chatbot:
         async for response in self.chat_hub.ask_stream(
                 prompt=prompt,
                 conversation_style=conversation_style,
+                wss_link=wss_link,
         ):
             yield response
 
