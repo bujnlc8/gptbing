@@ -9,7 +9,7 @@
   padding: 20rpx 30rpx 20rpx 30rpx;
   box-sizing: border-box;
   z-index: 10000;
-  border: 1rpx dashed;
+  border: 1px dashed;
 }
 
 .bt {

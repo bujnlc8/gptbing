@@ -4,8 +4,10 @@ import json as raw_json
 import os
 import re
 import threading
+from collections import defaultdict
 from datetime import datetime, timedelta
 
+import openai
 import requests
 from sanic import Sanic
 from sanic.log import logger
@@ -37,6 +39,9 @@ app.config.REQUEST_TIMEOUT = 900
 app.config.RESPONSE_TIMEOUT = 900
 app.config.WEBSOCKET_PING_INTERVAL = 15
 app.config.WEBSOCKET_PING_TIMEOUT = 30
+
+# openai conversation
+OPENAI_CONVERSATION = defaultdict(lambda: [])
 
 
 def reset_cookie():
@@ -189,6 +194,93 @@ async def openid(request):
     code = request.args.get('code')
     url = WX_URL % (APPID, APPSECRET, code)
     return json({'data': requests.get(url).json()})
+
+
+# #########################################以下是openid接口##################################
+
+
+@app.websocket('/ws_openai_chat')
+async def ws_openai_chat(_, ws):
+    while True:
+        try:
+            data = raw_json.loads(await ws.recv())
+            logger.info('Websocket receive data: %s', data)
+            sid = data['sid']
+            q = data['q']
+            # 保存30个对话
+            history_conversation = OPENAI_CONVERSATION[sid][-30:]
+            history_conversation.append({
+                'role': 'user',
+                'content': q,
+            })
+            response = openai.ChatCompletion.create(
+                model='gpt-3.5-turbo',
+                messages=history_conversation,
+                temperature=1.2,
+                stream=True,
+            )
+            chunks = []
+            for chunk in response:
+                chunk_message = chunk['choices'][0]['delta']
+                if chunk_message:
+                    if 'content' in chunk_message:
+                        chunks.append(chunk_message['content'])
+                        await ws.send(
+                            raw_json.dumps({
+                                'final': False,
+                                'data': make_response_data('Success', ''.join(chunks), [], '')
+                            })
+                        )
+                else:
+                    OPENAI_CONVERSATION[sid].append({
+                        'role': 'assistant',
+                        'content': ''.join(chunks)
+                    })
+                    await ws.send(
+                        raw_json.dumps({
+                            'final': True,
+                            'data': make_response_data('Success', ''.join(chunks), [], '')
+                        })
+                    )
+        except Exception as e:
+            logger.error(e)
+            await ws.send(raw_json.dumps({
+                'final': True,
+                'data': make_response_data('Error', str(e), [], str(e))
+            }))
+
+
+@app.post('/openai_chat')
+async def openai_chat(request):
+    try:
+        sid = request.json.get('sid')
+        q = request.json.get('q')
+        history_conversation = OPENAI_CONVERSATION[sid][-30:]
+        history_conversation.append({
+            'role': 'user',
+            'content': q,
+        })
+        response = openai.ChatCompletion.create(
+            model='gpt-3.5-turbo',
+            messages=history_conversation,
+            temperature=1.2,
+            stream=True,
+        )
+        chunks = []
+        for chunk in response:
+            chunk_message = chunk['choices'][0]['delta']
+            if chunk_message:
+                if 'content' in chunk_message:
+                    chunks.append(chunk_message['content'])
+            else:
+                OPENAI_CONVERSATION[sid].append({
+                    'role': 'assistant',
+                    'content': ''.join(chunks)
+                })
+                return json(make_response_data('Success', ''.join(chunks), [], ''))
+    except Exception as e:
+        logger.error(e)
+        return json(make_response_data('Error', str(e), [], str(e)))
 
 
 if __name__ == '__main__':

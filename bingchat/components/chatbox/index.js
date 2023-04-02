@@ -14,7 +14,12 @@ Component({
     addGlobalClass: true,
     multipleSlots: true,
   },
-  properties: {},
+  properties: {
+    chatType: {
+      type: String,
+      value: "bing"
+    }
+  },
   pageLifetimes: {
     show: function () {
       this.initMessageHistory()
@@ -146,63 +151,6 @@ Component({
         "cancelReceive", {}, {}
       )
     },
-    deleteAllChat: function () {
-      var that = this
-      wx.showModal({
-        content: "是否删除全部聊天？",
-        complete: (res) => {
-          if (res.confirm) {
-            that.setData({
-              chatList: [],
-            })
-            wx.setStorage({
-              key: "chatList",
-              data: [],
-            })
-          }
-        },
-      })
-    },
-    longPress: function (e) {
-      var that = this
-      wx.showActionSheet({
-        itemList: ["删除全部聊天记录", "切换聊天接口方式", that.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"],
-        success(res) {
-          if (res.tapIndex == 0) {
-            that.deleteAllChat()
-          } else if (res.tapIndex == 1) {
-            that.triggerEvent(
-              "switchRequestMethod", {}, {}
-            )
-          } else if (res.tapIndex == 2) {
-            if (that.data.closeShareOnCopy) {
-              that.setData({
-                closeShareOnCopy: false,
-              })
-              wx.showToast({
-                title: "已打开复制后分享",
-                icon: "none"
-              })
-              wx.removeStorage({
-                key: "closeShareOnCopy",
-              })
-            } else {
-              that.setData({
-                closeShareOnCopy: true,
-              })
-              wx.showToast({
-                title: "已关闭复制后分享",
-                icon: "none"
-              })
-              wx.setStorage({
-                key: "closeShareOnCopy",
-                data: 1,
-              })
-            }
-          }
-        }
-      })
-    },
     showOriginContent: function (e) {
       var index = e.currentTarget.dataset.index
       var data = this.data.chatList[index]
@@ -218,7 +166,7 @@ Component({
     onPopButtonClick: function (e) {
       if (e.detail.t !== "confirm") {
         wx.removeStorage({
-          key: 'shareContent',
+          key: "shareContent",
         })
       }
       this.setData({

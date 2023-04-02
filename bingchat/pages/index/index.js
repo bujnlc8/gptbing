@@ -24,6 +24,16 @@ function inputPop() {
 // 自增对话
 var autoIncrConversation = 0
 
+// 默认采用new bing
+var chatType = "bing"
+try {
+  if (wx.getStorageSync("usechatgpt")) {
+    chatType = "chatgpt"
+  }
+} catch (e) {
+  chatType = "bing"
+}
+
 Date.prototype.format = function (fmt) {
   var o = {
     "M+": this.getMonth() + 1, //月份
@@ -74,6 +84,7 @@ Page({
     useWebsocket: useWebsocket,
     showSearchPop: false,
     searchPopMessage: "",
+    chatType: chatType,
   },
   inputFocus(e) {
     if (inputPop()) {
@@ -120,16 +131,38 @@ Page({
     var options = this.getOptions()
     if (options && options["q"]) {
       var q = decodeURIComponent(options["q"])
+      var chatType = this.data.chatType
+      if (options["chatType"]) {
+        chatType = options["chatType"]
+        // 聊天方式不同，关闭websocket
+        if (chatType != this.data.chatType) {
+          this.onCancelReceive()
+        }
+      }
       this.setData({
         searchPopMessage: "即将搜索“" + q + "”",
         showSearchPop: true,
         q: q,
+        chatType: chatType,
       })
     }
     const cht = app.globalData.cht
     if (cht.data.chatList.length > 1) {
       cht.setData({
         scrollId: "item" + (cht.data.chatList.length - 2),
+      })
+    }
+    // 切换title
+    this.switchTitle()
+  },
+  switchTitle: function () {
+    if (this.data.chatType == "bing") {
+      wx.setNavigationBarTitle({
+        title: "New Bing 🤖️",
+      })
+    } else {
+      wx.setNavigationBarTitle({
+        title: "ChatGPT 🤖️",
       })
     }
   },
@@ -139,7 +172,7 @@ Page({
     if (robContent == "Success") {
       robContent = data["data"]["text"]
       suggests.push(...data["data"]["suggests"])
-      if (robContent.indexOf("New topic") != -1) {
+      if (robContent.indexOf("New topic") != -1 && this.data.chatType == "bing") {
         robContent += "\n发送“重新对话！”开始新的对话"
         suggests.push("重新对话！")
         suggests.push(content)
@@ -157,7 +190,9 @@ Page({
           suggests.push(content)
         } else {
           robContent = "抱歉😭，发生错误：" + msg
-          suggests.push("重新对话！")
+          if (this.data.chatType == "bing") {
+            suggests.push("重新对话！")
+          }
           suggests.push(content)
         }
       }
@@ -177,8 +212,9 @@ Page({
   sendHttpRequest: function (content) {
     var that = this
     const cht = app.globalData.cht
+    var api = that.data.chatType == "bing" ? "/chat" : "/openai_chat"
     app.getSid(sid => {
-      doRequest("/chat", "POST", {
+      doRequest(api, "POST", {
         q: content,
         sid: sid_prefix + sid,
       }).then(res => {
@@ -226,7 +262,7 @@ Page({
       content: "",
       lastContent: content,
     })
-    if (content == "重新对话！") {
+    if (content == "重新对话！" && that.data.chatType == "bing") {
       that.resetConversation(() => {
         that.pushStorageMessage(cht, "现在我们可以开始新的对话😊", "rob", [], false)
       })
@@ -244,9 +280,10 @@ Page({
     if (pop) {
       cht.data.chatList.pop()
     }
+    var rAvatar = this.data.chatType == "bing" ? robAvatar : "../../image/chatgpt.png"
     cht.data.chatList.push({
       type: role,
-      avatarUrl: role == "rob" ? robAvatar : personAvatar,
+      avatarUrl: role == "rob" ? rAvatar : personAvatar,
       dt: getNow(),
       originContent: this.processContent(content),
       suggests: suggests,
@@ -281,7 +318,7 @@ Page({
     this.submitContent(content)
   },
   onShareAppMessage() {
-    var title = "New Bing Bot 🤖"
+    var title = this.data.chatType == "bing" ? "New Bing 🤖" : "ChatGPT 🤖️"
     var content = this.data.content.trim()
     if (content.length > 0) {
       title = content
@@ -299,8 +336,8 @@ Page({
     }
     return {
       title: title,
-      path: "/pages/index/index?q=" + encodeURIComponent(content),
-      imageUrl: "../../image/newBing.png"
+      path: "/pages/index/index?q=" + encodeURIComponent(content) + "&chatType=" + this.data.chatType,
+      imageUrl: this.data.chatType == "bing" ? "../../image/newBing.png" : "../../image/chatgpt_share.png"
     }
   },
   onSuggestSubmit: function (e) {
@@ -318,8 +355,9 @@ Page({
     }
     var that = this
     const cht = app.globalData.cht
+    var apiPath = that.data.chatType == "bing" ? "/chat" : "/ws_openai_chat"
     const socket = wx.connectSocket({
-      url: SERVER_WSS_HOST + "/chat",
+      url: SERVER_WSS_HOST + apiPath,
       fail: function () {
         wx.showToast({
           title: "打开websocket失败",
@@ -380,7 +418,11 @@ Page({
       var robContent = ""
       var num_in_conversation = -1
       if (!data["final"]) {
-        robContent = data["data"] + " ..."
+        if (data["data"]["data"]) {
+          robContent = data["data"]["data"]["text"] + " ..."
+        } else {
+          robContent = data["data"] + " ..."
+        }
         cht.setData({
           receiveData: true
         })
@@ -485,5 +527,91 @@ Page({
         }
       })
     }
-  }
+  },
+  deleteAllChat: function () {
+    const cht = app.globalData.cht
+    wx.showModal({
+      content: "是否删除全部聊天？",
+      complete: (res) => {
+        if (res.confirm) {
+          cht.setData({
+            chatList: [],
+          })
+          wx.setStorage({
+            key: "chatList",
+            data: [],
+          })
+        }
+      },
+    })
+  },
+  longPress: function (e) {
+    var that = this
+    const cht = app.globalData.cht
+    wx.showActionSheet({
+      itemList: ["删除全部聊天记录", "切换聊天接口方式", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"],
+      success(res) {
+        if (res.tapIndex == 0) {
+          that.deleteAllChat()
+        } else if (res.tapIndex == 1) {
+          that.switchRequestMethod()
+        } else if (res.tapIndex == 3) {
+          if (cht.data.closeShareOnCopy) {
+            cht.setData({
+              closeShareOnCopy: false,
+            })
+            wx.showToast({
+              title: "已打开复制后分享",
+              icon: "none"
+            })
+            wx.removeStorage({
+              key: "closeShareOnCopy",
+            })
+          } else {
+            cht.setData({
+              closeShareOnCopy: true,
+            })
+            wx.showToast({
+              title: "已关闭复制后分享",
+              icon: "none"
+            })
+            wx.setStorage({
+              key: "closeShareOnCopy",
+              data: 1,
+            })
+          }
+        } else if (res.tapIndex == 2) {
+          if (that.data.chatType == "chatgpt") {
+            wx.removeStorage({
+              key: "usechatgpt",
+            })
+            that.setData({
+              chatType: "bing",
+            })
+            wx.showToast({
+              title: "已切换成New Bing",
+              icon: "none"
+            })
+          } else {
+            wx.setStorage({
+              key: "usechatgpt",
+              data: 1,
+            })
+            that.setData({
+              chatType: "chatgpt",
+            })
+            wx.showToast({
+              title: "已切换成ChatGPT",
+              icon: "none"
+            })
+          }
+        }
+        // 关闭websocket
+        that.onCancelReceive()
+        setTimeout(() => {
+          that.switchTitle()
+        }, 100)
+      }
+    })
+  },
 })
