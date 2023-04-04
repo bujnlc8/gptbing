@@ -13,6 +13,7 @@ from sanic import Sanic
 from sanic.log import logger
 from sanic.response import json
 
+from conversation_ctr import conversation_ctr
 from EdgeGPT import Chatbot, ConversationStyle
 
 APPID = os.environ.get('WXAPPID')
@@ -80,9 +81,10 @@ async def ws_chat(_, ws):
     while True:
         try:
             data = raw_json.loads(await ws.recv())
-            logger.info('Websocket receive data: %s', data)
+            logger.info('[bing] Websocket receive data: %s', data)
             sid = data['sid']
             q = data['q']
+            index = 0
             async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle.creative):
                 final, res = response
                 if final:
@@ -96,10 +98,12 @@ async def ws_chat(_, ws):
                         'data': processed_data
                     }))
                 else:
-                    await ws.send(raw_json.dumps({
-                        'final': final,
-                        'data': res
-                    }))
+                    index += 1
+                    if index % 3 == 1:
+                        await ws.send(raw_json.dumps({
+                            'final': final,
+                            'data': res
+                        }))
         except Exception as e:
             logger.error(e)
             await ws.send(raw_json.dumps({
@@ -127,7 +131,7 @@ async def reset_conversation(sid):
 
 
 async def do_chat(request):
-    logger.info('Http request payload: %s', request.json)
+    logger.info('[bing] Http request payload: %s', request.json)
     return await get_bot(request.json.get('sid')).ask(
         request.json.get('q'), conversation_style=ConversationStyle.creative
     )
@@ -157,9 +161,6 @@ async def process_data(res, q, sid, auto_reset=None):
             text = '抱歉，未搜索到结果。'
             logger.error('响应异常：%s', res)
             suggests = [q]
-            if res['type'] == 2:
-                await reset_conversation(sid)
-                text += '\n已结束本轮对话。'
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
     if auto_reset and ('New topic' in text or 'has expired' in msg):
         await reset_conversation(sid)
@@ -204,7 +205,7 @@ async def ws_openai_chat(_, ws):
     while True:
         try:
             data = raw_json.loads(await ws.recv())
-            logger.info('Websocket receive data: %s', data)
+            logger.info('[openai] Websocket receive data: %s', data)
             sid = data['sid']
             q = data['q']
             # 保存30个对话
@@ -220,11 +221,14 @@ async def ws_openai_chat(_, ws):
                 stream=True,
             )
             chunks = []
+            index = 0
             for chunk in response:
                 chunk_message = chunk['choices'][0]['delta']
                 if chunk_message:
                     if 'content' in chunk_message:
                         chunks.append(chunk_message['content'])
+                        index += 1
+                    if index % 5 == 1:
                         await ws.send(
                             raw_json.dumps({
                                 'final': False,
@@ -253,6 +257,7 @@ async def ws_openai_chat(_, ws):
 @app.post('/openai_chat')
 async def openai_chat(request):
     try:
+        logger.info('[openai] Http request payload: %s', request.json)
         sid = request.json.get('sid')
         q = request.json.get('q')
         history_conversation = OPENAI_CONVERSATION[sid][-30:]
@@ -281,6 +286,37 @@ async def openai_chat(request):
     except Exception as e:
         logger.error(e)
         return json(make_response_data('Error', str(e), [], str(e)))
+
+
+@app.route('/last_sync_time')
+async def last_sync_time(request):
+    return json({'last_sync_time': conversation_ctr.get_last_sync_time(request.args.get('sid'))})
+
+
+@app.post('/save')
+async def save(request):
+    conversation_ctr.save(request.json.get('sid'), request.json.get('conversations'))
+    return json({})
+
+
+@app.route('/query')
+async def query(request):
+    data = conversation_ctr.get_by_page(
+        request.args.get('sid'), int(request.args.get('page', '1')), int(request.args.get('size', '20'))
+    )
+    return json({'data': data})
+
+
+@app.post('/delete')
+async def delete(request):
+    conversation_ctr.delete(request.json.get('sid'), request.json.get('conversation'))
+    return json({})
+
+
+@app.post('/delete_all')
+async def delete_all(request):
+    conversation_ctr.delete_all(request.json.get('sid'))
+    return json({})
 
 
 if __name__ == '__main__':

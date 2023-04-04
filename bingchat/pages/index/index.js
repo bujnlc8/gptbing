@@ -1,11 +1,10 @@
 import {
   doRequest,
-  SERVER_WSS_HOST
+  SERVER_WSS_HOST,
+  systemInfo,
+  sid_prefix
 } from "../../config"
 
-const systemInfo = wx.getSystemInfoSync()
-// 各平台对话分离
-const sid_prefix = systemInfo.platform == "ios" || systemInfo.platform == "android" ? "" : systemInfo.platform
 const initHeight = inputPop() ? 22 : 5
 // 是否使用websocket请求
 var useWebsocket = true
@@ -146,12 +145,6 @@ Page({
         chatType: chatType,
       })
     }
-    const cht = app.globalData.cht
-    if (cht.data.chatList.length > 1) {
-      cht.setData({
-        scrollId: "item" + (cht.data.chatList.length - 2),
-      })
-    }
     // 切换title
     this.switchTitle()
   },
@@ -166,7 +159,24 @@ Page({
       })
     }
   },
-  onLoad() {},
+  scrollBottom: function () {
+    const cht = app.globalData.cht
+    if (cht.data.chatList.length > 1 && !this.data.textareaFocus) {
+      cht.setData({
+        scrollId: "item" + (cht.data.chatList.length - 2),
+      })
+    }
+  },
+  onLoad() {
+    const cht = app.globalData.cht
+    setTimeout(() => {
+      if (cht.data.chatList.length > 1) {
+        cht.setData({
+          scrollId: "item" + (cht.data.chatList.length - 2),
+        })
+      }
+    }, 1500)
+  },
   processData: function (data, suggests, content) {
     var robContent = data["data"]["status"]
     if (robContent == "Success") {
@@ -268,7 +278,7 @@ Page({
       })
       return
     } else {
-      that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true)
+      that.pushStorageMessage(cht, "搜索中🔍...", "rob", [], true, false, -1, false)
     }
     if (that.data.useWebsocket) {
       that.sendWSRequest(content)
@@ -300,10 +310,14 @@ Page({
         searching: false
       })
     }
+    // 只保留最新的10条
     wx.setStorage({
       key: "chatList",
-      data: cht.data.chatList,
+      data: cht.data.chatList.slice(cht.data.chatList.length - 10),
     })
+    if (final) {
+      app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 1))
+    }
     setTimeout(() => {
       cht.setData({
         scrollId: "item" + (autoIncrConversation + "9999"),
@@ -537,9 +551,12 @@ Page({
           cht.setData({
             chatList: [],
           })
-          wx.setStorage({
-            key: "chatList",
-            data: [],
+          app.getSid(sid => {
+            doRequest("/delete_all", "POST", {
+              "sid": sid_prefix + sid
+            }).then(res => {
+              console.log("delete all")
+            })
           })
         }
       },

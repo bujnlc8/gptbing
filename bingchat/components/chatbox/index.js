@@ -1,5 +1,11 @@
 const app = getApp()
 
+import {
+  doRequest,
+  sid_prefix,
+  systemInfo
+} from "../../config"
+
 var closeShareOnCopy = false
 try {
   if (wx.getStorageSync("closeShareOnCopy")) {
@@ -22,14 +28,14 @@ Component({
   },
   pageLifetimes: {
     show: function () {
-      this.initMessageHistory()
+      // this.initMessageHistory()
     },
   },
   lifetimes: {
     attached() {
       var that = this
       app.globalData.cht = that
-      //that.initMessageHistory()
+      that.initMessageHistory()
       wx.getSystemInfo({
         success: function (res) {
           that.setData({
@@ -48,22 +54,69 @@ Component({
     autoIncrConversation: 1,
     closeShareOnCopy: closeShareOnCopy,
     showShare: false,
+    loadingData: false,
+    height: systemInfo.windowHeight - parseInt(100 / 750 * systemInfo.windowWidth) - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : 5)
   },
   methods: {
-    initMessageHistory() {
+    bindscrolltoupper: function (e) {
       var that = this
-      var data = wx.getStorageSync("chatList")
-      data = data ? data : []
-      data.forEach((v) => {
-        if (v["suggests"] === undefined) {
-          v["suggests"] = []
-        }
-      })
-      if (data.length > 0) {
-        that.setData({
-          chatList: data,
-        })
+      if (that.data.loadingData) {
+        return
       }
+      that.setData({
+        loadingData: true
+      })
+      wx.showLoading({
+        title: "加载历史记录...",
+      })
+      app.getSid(sid => {
+        var page = 1
+        if (that.data.chatList.length > 0) {
+          page = Math.ceil((that.data.chatList.length + 1) / 10)
+        }
+        doRequest("/query", "GET", {
+          "sid": sid_prefix + sid,
+          "page": page,
+          "size": 10,
+        }).then(res => {
+          var data = res.data["data"]
+          data.reverse()
+          var oldData = that.data.chatList
+          var filterData = []
+          if (oldData.length > 0) {
+            data.forEach(k => {
+              if (k["dt"] < oldData[0]["dt"]) {
+                filterData.push(k)
+              }
+            })
+          } else {
+            filterData = data
+          }
+          var newData = filterData.concat(oldData)
+          that.setData({
+            chatList: newData,
+            loadingData: false
+          }, () => {
+            if (filterData.length == 0 && e) {
+              setTimeout(() => {
+                wx.showToast({
+                  title: "已加载完成"
+                })
+              }, 300)
+            } else {
+              setTimeout(() => {
+                wx.hideLoading()
+              }, 300)
+            }
+          })
+        }).catch(res => {
+          wx.hideLoading()
+          console.log(res)
+        })
+      })
+    },
+    initMessageHistory() {
+      this.bindscrolltoupper()
     },
     clearChat: function (e) {
       var that = this
@@ -73,13 +126,18 @@ Component({
         content: "是否删除该条聊天？",
         complete: (res) => {
           if (res.confirm) {
+            var deleteData = data[index]
             data.splice(index, 1)
             that.setData({
               chatList: data,
             })
-            wx.setStorage({
-              key: "chatList",
-              data: data,
+            app.getSid(sid => {
+              doRequest("/delete", "POST", {
+                "sid": sid_prefix + sid,
+                "conversation": deleteData
+              }).then(res => {
+                console.log(res)
+              })
             })
           }
         },

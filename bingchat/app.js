@@ -1,5 +1,6 @@
 import {
-  doRequest
+  doRequest,
+  sid_prefix
 } from "./config"
 
 App({
@@ -8,8 +9,45 @@ App({
     this.getSid(sid => {
       console.log(sid)
     })
+    this.upload_conversation()
+  },
+  onHide: function () {
+    this.upload_conversation()
   },
   globalData: {},
+  upload_cache_conversation: function (sid) {
+    wx.getStorage({
+      key: "chatList",
+      success: function (res) {
+        var data = res.data
+        if (data && data.length > 0) {
+          doRequest("/save", "POST", {
+            "sid": sid_prefix + sid,
+            "conversations": data
+          }).then(res => {
+            console.log("upload " + data.length + " conversations success!")
+          })
+        }
+      }
+    })
+  },
+  upload_conversation: function (conversations = []) {
+    var that = this
+    if (conversations.length == 0) {
+      that.getSid(sid => {
+        that.upload_cache_conversation(sid)
+      })
+    } else {
+      that.getSid(sid => {
+        doRequest("/save", "POST", {
+          "sid": sid_prefix + sid,
+          "conversations": conversations,
+        }).then(res => {
+          console.log("upload " + conversations.length + " conversations success!")
+        })
+      })
+    }
+  },
   getSid: function (callback) {
     var that = this
     if (!this.globalData.sid) {

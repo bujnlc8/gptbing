@@ -4,3 +4,5 @@ asyncio==3.4.3
 websockets==10.4
 httpx==0.23.3
 openai==0.27.2
+redis==4.5.1
+hiredis==2.2.2

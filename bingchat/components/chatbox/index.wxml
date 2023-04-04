@@ -1,11 +1,11 @@
 <wxs src="../../tools.wxs" module="tools" />
 <view wx:if="{{chatList.length == 0}}" style="text-align:center;color: #b4bbc4;font-size: 30rpx;">输入问题开始和{{chatType == "bing" ? "New Bing" : "ChatGPT"}}聊天吧~</view>
-<scroll-view class="chat" scroll-y="{{true}}" scroll-into-view="{{scrollId}}" style="height:{{systemInfo.windowHeight - 70}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" enable-passive="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}">
+<scroll-view class="chat" scroll-y="{{true}}" scroll-into-view="{{scrollId}}" style="height:{{height}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}" bindrefresherrefresh="bindscrolltoupper" scroll-with-animation="{{true}}" refresher-enabled="{{ systemInfo.platform == 'ios' || systemInfo.platform == 'android'}}" refresher-triggered="{{loadingData}}" refresher-threshold="80" bindscrolltoupper="{{!(systemInfo.platform == 'ios' || systemInfo.platform == 'android') ? 'bindscrolltoupper': ''}}">
 	<view wx:for="{{chatList}}" wx:key="index" wx:for-item="item" id="{{'item'+index}}">
 		<view class="chat-item left" wx:if="{{item.type != 'man'}}" id="msg-{{index}}">
 			<image class="avatar" src="{{item.avatarUrl}}" style="display: flex;" catchlongpress="clearChat" data-index="{{index}}" catchtap="showOriginContent" data-index="{{index}}"></image>
 			<view class="chat-box" style="margin-left: 20rpx;">
-				<view style="display: flex;flex-direction: row;align-items: center;"><text class="dt" style="flex: 1;">{{item.dt}}</text>
+				<view style="display: flex;flex-direction: row;align-items: center;"><text class="dt" style="flex: 2;">{{item.dt}}</text>
 					<view wx:if="{{item.num_in_conversation && item.num_in_conversation != -1}}" style="display:flex;justify-content:flex-end; flex: 1;align-items: center;"><text class="conversation_num">{{item.num_in_conversation}}</text></view>
 				</view>
 				<view class="content bg-white" catchlongpress="copyContent" data-index="{{index}}" catchtap="{{tools.indexOf(item.originContent, '```markdown') ? 'renderMd': ''}}">
@@ -28,5 +28,5 @@
 	</view>
 	<view id="{{'item'+ autoIncrConversation + 9999}}" style="height: 1em;"></view>
 </scroll-view>
-<icon wx:if="{{receiveData}}" type="cancel" catchtap="cancelReceive" style="position: absolute;bottom: 145rpx;right:1%;z-index: 10000;" size="20"></icon>
+<icon wx:if="{{receiveData}}" type="cancel" catchtap="cancelReceive" style="position: absolute;bottom: 148rpx;right:1%;z-index: 10000;" size="22"></icon>
 <popup message="是否分享搜索内容？" wx:if="{{showShare}}" bindPopButtonClick="onPopButtonClick" openType="share"></popup>
