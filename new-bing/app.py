@@ -45,6 +45,13 @@ app.config.WEBSOCKET_PING_TIMEOUT = 30
 OPENAI_CONVERSATION = defaultdict(lambda: [])
 
 
+def show_chatgpt(sid):
+    for openid in conversation_ctr.get_openai_whitelist():
+        if openid.decode() in sid:
+            return 1
+    return 0
+
+
 def reset_cookie():
     if not LOCK.acquire(blocking=False):
         return
@@ -217,6 +224,8 @@ async def ws_openai_chat(_, ws):
             data = raw_json.loads(await ws.recv())
             logger.info('[openai] Websocket receive data: %s', data)
             sid = data['sid']
+            if not show_chatgpt(sid):
+                raise Exception('无权限访问此服务')
             q = data['q']
             # 保存30个对话
             history_conversation = OPENAI_CONVERSATION[sid][-30:]
@@ -227,7 +236,7 @@ async def ws_openai_chat(_, ws):
             response = openai.ChatCompletion.create(
                 model='gpt-3.5-turbo',
                 messages=history_conversation,
-                temperature=1.2,
+                temperature=0.8,
                 stream=True,
             )
             chunks = []
@@ -269,6 +278,8 @@ async def openai_chat(request):
     try:
         logger.info('[openai] Http request payload: %s', request.json)
         sid = request.json.get('sid')
+        if not show_chatgpt(sid):
+            raise Exception('无权限访问此服务')
         q = request.json.get('q')
         history_conversation = OPENAI_CONVERSATION[sid][-30:]
         history_conversation.append({
@@ -278,7 +289,7 @@ async def openai_chat(request):
         response = openai.ChatCompletion.create(
             model='gpt-3.5-turbo',
             messages=history_conversation,
-            temperature=1.2,
+            temperature=0.8,
             stream=True,
         )
         chunks = []
@@ -306,7 +317,7 @@ async def last_sync_time(request):
 @app.post('/save')
 async def save(request):
     conversation_ctr.save(request.json.get('sid'), request.json.get('conversations'))
-    return json({'saved': 0})
+    return json({'saved': show_chatgpt(request.json.get('sid'))})
 
 
 @app.route('/query')

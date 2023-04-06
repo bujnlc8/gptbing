@@ -15,6 +15,7 @@ class ConversationCtr:
 
     LAST_SYNC_TIME_KEY = 'bing:last_sync_time:%s'
     CONVERSATION_LIST_KEY = 'bing:conversation_list:%s'
+    OPENAI_WHITE_LIST_KEY = 'bing:openai_white_list'
 
     def __init__(self, client=None) -> None:
         self.redis_client = client
@@ -53,6 +54,9 @@ class ConversationCtr:
     def delete_all(self, sid):
         key = self.CONVERSATION_LIST_KEY % sid
         self.redis_client.delete(key)
+
+    def get_openai_whitelist(self):
+        return self.redis_client.lrange(self.OPENAI_WHITE_LIST_KEY, 0, 10000)
 
 
 conversation_ctr = ConversationCtr()

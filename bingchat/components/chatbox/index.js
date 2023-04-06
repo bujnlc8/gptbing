@@ -28,21 +28,13 @@ Component({
   },
   pageLifetimes: {
     show: function () {
-      // this.initMessageHistory()
+      //this.initMessageHistory()
     },
   },
   lifetimes: {
     attached() {
-      var that = this
-      app.globalData.cht = that
-      that.initMessageHistory()
-      wx.getSystemInfo({
-        success: function (res) {
-          that.setData({
-            systemInfo: res,
-          })
-        },
-      })
+      app.globalData.cht = this
+      this.initMessageHistory()
     },
     detached() {
       try {} catch (error) {}
@@ -55,6 +47,7 @@ Component({
     closeShareOnCopy: closeShareOnCopy,
     showShare: false,
     loadingData: false,
+    systemInfo: systemInfo,
     height: systemInfo.windowHeight - parseInt(100 / 750 * systemInfo.windowWidth) - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : 5)
   },
   methods: {
@@ -106,13 +99,13 @@ Component({
             if (filterData.length == 0 && e) {
               setTimeout(() => {
                 wx.showToast({
-                  title: "已加载完成"
+                  title: "已全部加载完成"
                 })
-              }, 300)
+              }, 100)
             } else {
               setTimeout(() => {
                 wx.hideLoading()
-              }, 300)
+              }, 100)
             }
           })
         }).catch(res => {
@@ -122,7 +115,6 @@ Component({
       })
     },
     initMessageHistory() {
-      //this.bindscrolltoupper()
       var that = this
       wx.getStorage({
         key: "chatList",
@@ -133,7 +125,12 @@ Component({
             that.setData({
               chatList: data,
             })
+          } else {
+            that.bindscrolltoupper()
           }
+        },
+        fail: function () {
+          that.bindscrolltoupper()
         }
       })
     },
