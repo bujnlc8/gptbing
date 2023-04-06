@@ -85,6 +85,7 @@ async def ws_chat(_, ws):
             sid = data['sid']
             q = data['q']
             index = 0
+            last_not_final_text = ''
             async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle.creative):
                 final, res = response
                 if final:
@@ -93,17 +94,24 @@ async def ws_chat(_, ws):
                         reset_cookie()
                         await reset_conversation(sid)
                         processed_data['data']['suggests'].append(q)
+                    # 屏蔽 My mistake, I can’t give a response to that right now. Let’s try a different topic.
+                    if last_not_final_text and 'try a different topic.' in processed_data['data']['text']:
+                        processed_data = make_response_data(
+                            'Success', last_not_final_text, [], '', processed_data['data']['num_in_conversation']
+                        )
                     await ws.send(raw_json.dumps({
                         'final': final,
                         'data': processed_data
                     }))
                 else:
                     index += 1
-                    if index % 3 == 1:
+                    if index % 2 == 1 and 'try a different topic.' not in res:
                         await ws.send(raw_json.dumps({
                             'final': final,
                             'data': res
                         }))
+                    if 'try a different topic.' not in res:
+                        last_not_final_text = res
         except Exception as e:
             logger.error(e)
             await ws.send(raw_json.dumps({
@@ -151,14 +159,16 @@ async def process_data(res, q, sid, auto_reset=None):
                     pass
             if not text:
                 if 'text' not in item[1]:
-                    text = '响应异常'
+                    text = '抱歉，响应异常。已开启新一轮对话，可重试😊'
+                    await reset_conversation(sid)
                     logger.error('响应异常：%s', res)
                 else:
                     text = item[1]['text']
             text = re.sub(r'\[\^\d+\^\]', '', text)
             suggests = [x['text'] for x in item[1]['suggestedResponses']] if 'suggestedResponses' in item[1] else []
         else:
-            text = '抱歉，未搜索到结果。'
+            text = '抱歉，未搜索到相关结果。已开启新一轮对话，可重试😊'
+            await reset_conversation(sid)
             logger.error('响应异常：%s', res)
             suggests = [q]
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
@@ -228,7 +238,7 @@ async def ws_openai_chat(_, ws):
                     if 'content' in chunk_message:
                         chunks.append(chunk_message['content'])
                         index += 1
-                    if index % 5 == 1:
+                    if index % 3 == 1:
                         await ws.send(
                             raw_json.dumps({
                                 'final': False,
@@ -296,13 +306,13 @@ async def last_sync_time(request):
 @app.post('/save')
 async def save(request):
     conversation_ctr.save(request.json.get('sid'), request.json.get('conversations'))
-    return json({})
+    return json({'saved': 0})
 
 
 @app.route('/query')
 async def query(request):
     data = conversation_ctr.get_by_page(
-        request.args.get('sid'), int(request.args.get('page', '1')), int(request.args.get('size', '20'))
+        request.args.get('sid'), int(request.args.get('page', '1')), int(request.args.get('size', '10'))
     )
     return json({'data': data})
 

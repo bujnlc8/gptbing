@@ -62,7 +62,7 @@ HEADERS_INIT_CONVER = {
     "upgrade-insecure-requests": "1",
     "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36 Edg/111.0.1661.43",
     "x-edge-shopping-flag": "1",
-    "x-forwarded-for": "1.1.1.1",
+    "x-forwarded-for": FORWARDED_IP,
 }
 
 ssl_context = ssl.create_default_context()

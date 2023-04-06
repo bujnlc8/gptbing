@@ -97,6 +97,12 @@ Component({
             chatList: newData,
             loadingData: false
           }, () => {
+            if (oldData.length < 10) {
+              wx.setStorage({
+                key: "chatList",
+                data: newData.slice(newData.length - 10),
+              })
+            }
             if (filterData.length == 0 && e) {
               setTimeout(() => {
                 wx.showToast({
@@ -116,7 +122,20 @@ Component({
       })
     },
     initMessageHistory() {
-      this.bindscrolltoupper()
+      //this.bindscrolltoupper()
+      var that = this
+      wx.getStorage({
+        key: "chatList",
+        success: function (res) {
+          var data = res.data
+          data = data ? data : []
+          if (data.length > 0) {
+            that.setData({
+              chatList: data,
+            })
+          }
+        }
+      })
     },
     clearChat: function (e) {
       var that = this
@@ -137,6 +156,10 @@ Component({
                 "conversation": deleteData
               }).then(res => {
                 console.log(res)
+                wx.setStorage({
+                  key: "chatList",
+                  data: data.slice(data.length - 10),
+                })
               })
             })
           }

@@ -175,7 +175,7 @@ Page({
           scrollId: "item" + (cht.data.chatList.length - 2),
         })
       }
-    }, 1500)
+    }, 500)
   },
   processData: function (data, suggests, content) {
     var robContent = data["data"]["status"]
@@ -556,6 +556,10 @@ Page({
               "sid": sid_prefix + sid
             }).then(res => {
               console.log("delete all")
+              wx.setStorage({
+                key: "chatList",
+                data: []
+              })
             })
           })
         }
@@ -565,14 +569,18 @@ Page({
   longPress: function (e) {
     var that = this
     const cht = app.globalData.cht
+    var itemList = ["删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
+    if (app.globalData["saved"] && app.globalData["saved"] == 1) {
+      itemList = ["删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
+    }
     wx.showActionSheet({
-      itemList: ["删除全部聊天记录", "切换聊天接口方式", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"],
+      itemList: itemList,
       success(res) {
         if (res.tapIndex == 0) {
           that.deleteAllChat()
         } else if (res.tapIndex == 1) {
           that.switchRequestMethod()
-        } else if (res.tapIndex == 3) {
+        } else if (res.tapIndex == 2) {
           if (cht.data.closeShareOnCopy) {
             cht.setData({
               closeShareOnCopy: false,
@@ -597,7 +605,7 @@ Page({
               data: 1,
             })
           }
-        } else if (res.tapIndex == 2) {
+        } else if (res.tapIndex == 3) {
           if (that.data.chatType == "chatgpt") {
             wx.removeStorage({
               key: "usechatgpt",

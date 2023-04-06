@@ -16,6 +16,7 @@ App({
   },
   globalData: {},
   upload_cache_conversation: function (sid) {
+    var that = this
     wx.getStorage({
       key: "chatList",
       success: function (res) {
@@ -25,6 +26,7 @@ App({
             "sid": sid_prefix + sid,
             "conversations": data
           }).then(res => {
+            that.globalData["saved"] = res.data["saved"]
             console.log("upload " + data.length + " conversations success!")
           })
         }
