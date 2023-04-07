@@ -1,0 +1,1 @@
+20 23 7,17,27 * * . /bing/env && /usr/local/bin/python /bing/login.py >> /bing/cron.log 2>&1
