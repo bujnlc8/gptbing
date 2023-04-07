@@ -570,7 +570,7 @@ Page({
     var that = this
     const cht = app.globalData.cht
     var itemList = ["删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
-    if (app.globalData["saved"] && app.globalData["saved"] == 1) {
+    if ((app.globalData["saved"] && app.globalData["saved"] == 1) || that.data.chatType == "chatgpt") {
       itemList = ["删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
     }
     wx.showActionSheet({
