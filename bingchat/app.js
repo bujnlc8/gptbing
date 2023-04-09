@@ -1,6 +1,6 @@
 import {
   doRequest,
-  sid_prefix
+  sidPrefix
 } from "./config"
 
 App({
@@ -23,7 +23,7 @@ App({
         var data = res.data
         if (data && data.length > 0) {
           doRequest("/save", "POST", {
-            "sid": sid_prefix + sid,
+            "sid": sidPrefix + sid,
             "conversations": data
           }).then(res => {
             that.globalData["saved"] = res.data["saved"]
@@ -42,7 +42,7 @@ App({
     } else {
       that.getSid(sid => {
         doRequest("/save", "POST", {
-          "sid": sid_prefix + sid,
+          "sid": sidPrefix + sid,
           "conversations": conversations,
         }).then(res => {
           console.log("upload " + conversations.length + " conversations success!")

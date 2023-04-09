@@ -13,6 +13,7 @@
 						<mp-html content="{{item.content ? item.content: item.originContent}}" preview-img selectable="{{true}}" markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}" use-anchor="{{true}}" scroll-table="{{true}}" container-style="margin-top: -1em;" wx:if="{{!item.showOrigin}}" /><text wx:else user-select="{{true}}" decode="{{true}}">{{item.originContent}}</text>
 					</view>
 				</view>
+				<quotes content="{{item.originContent}}"></quotes>
 				<view class="suggest">
 					<view hover-class="suggest-item-hover" class="suggest-item" catchtap="suggestSubmit" data-suggest="{{suggest}}" wx:key="index" wx:for="{{item.suggests}}" wx:for-item="suggest" wx:if="{{suggest && suggest.length > 0}}">{{suggest}}</view>
 				</view>

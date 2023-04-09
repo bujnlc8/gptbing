@@ -2,7 +2,7 @@ import {
   doRequest,
   SERVER_WSS_HOST,
   systemInfo,
-  sid_prefix
+  sidPrefix
 } from "../../config"
 
 const initHeight = inputPop() ? 22 : 5
@@ -31,6 +31,17 @@ try {
   }
 } catch (e) {
   chatType = "bing"
+}
+// 对话模式
+var chatStyleList = ["creative", "balanced", "precise"]
+var chatStyle = chatStyleList[0]
+try {
+  var chatStyle = wx.getStorageSync("chatStyle")
+  if (!chatStyle) {
+    chatStyle = chatStyleList[0]
+  }
+} catch (e) {
+  chatStyle = chatStyleList[0]
 }
 
 Date.prototype.format = function (fmt) {
@@ -84,6 +95,12 @@ Page({
     showSearchPop: false,
     searchPopMessage: "",
     chatType: chatType,
+    chatStyle: chatStyle,
+    chatStyleBg: {
+      creative: "#8B257E",
+      balanced: "#1B4AEF",
+      precise: "#005366"
+    }
   },
   inputFocus(e) {
     if (inputPop()) {
@@ -104,7 +121,7 @@ Page({
   resetConversation: function (callback) {
     app.getSid(sid => {
       doRequest("/reset", "GET", {
-        sid: sid_prefix + sid,
+        sid: sidPrefix + sid,
       }).then(res => {
         if (callback) {
           callback(res)
@@ -175,7 +192,7 @@ Page({
           scrollId: "item" + (cht.data.chatList.length - 2),
         })
       }
-    }, 500)
+    }, 300)
   },
   processData: function (data, suggests, content) {
     var robContent = data["data"]["status"]
@@ -213,9 +230,10 @@ Page({
     var that = this
     app.getSid(sid => {
       that.sendSocketMessage({
-        "q": content,
-        "sid": sid_prefix + sid,
-        "t": new Date().getTime()
+        q: content,
+        sid: sidPrefix + sid,
+        t: new Date().getTime(),
+        style: that.data.chatStyle,
       })
     })
   },
@@ -226,7 +244,8 @@ Page({
     app.getSid(sid => {
       doRequest(api, "POST", {
         q: content,
-        sid: sid_prefix + sid,
+        sid: sidPrefix + sid,
+        style: that.data.chatStyle,
       }).then(res => {
         try {
           var robContent = ""
@@ -553,7 +572,7 @@ Page({
           })
           app.getSid(sid => {
             doRequest("/delete_all", "POST", {
-              "sid": sid_prefix + sid
+              "sid": sidPrefix + sid
             }).then(res => {
               console.log("delete all")
               wx.setStorage({
@@ -569,18 +588,43 @@ Page({
   longPress: function (e) {
     var that = this
     const cht = app.globalData.cht
-    var itemList = ["删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
+    var itemList = ["选择对话模式", "删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
     if ((app.globalData["saved"] && app.globalData["saved"] == 1) || that.data.chatType == "chatgpt") {
-      itemList = ["删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
+      itemList = ["选择对话模式", "删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
     }
     wx.showActionSheet({
       itemList: itemList,
       success(res) {
         if (res.tapIndex == 0) {
-          that.deleteAllChat()
+          var items = ["更多创造力", "更多平衡", "更多精确"]
+          items.forEach((v, k) => {
+            if (that.data.chatStyle == chatStyleList[k]) {
+              items[k] += "(已选)"
+            }
+          })
+          wx.showActionSheet({
+            title: "选择对话模式",
+            itemList: items,
+            success(res) {
+              wx.showToast({
+                title: "已选择“" + items[res.tapIndex] + "”",
+                icon: "none"
+              })
+              var chatStyle = chatStyleList[res.tapIndex]
+              that.setData({
+                chatStyle: chatStyle
+              })
+              wx.setStorage({
+                key: "chatStyle",
+                data: chatStyle,
+              })
+            }
+          })
         } else if (res.tapIndex == 1) {
-          that.switchRequestMethod()
+          that.deleteAllChat()
         } else if (res.tapIndex == 2) {
+          that.switchRequestMethod()
+        } else if (res.tapIndex == 3) {
           if (cht.data.closeShareOnCopy) {
             cht.setData({
               closeShareOnCopy: false,
@@ -605,7 +649,7 @@ Page({
               data: 1,
             })
           }
-        } else if (res.tapIndex == 3) {
+        } else if (res.tapIndex == 4) {
           if (that.data.chatType == "chatgpt") {
             wx.removeStorage({
               key: "usechatgpt",

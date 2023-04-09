@@ -91,9 +91,10 @@ async def ws_chat(_, ws):
             logger.info('[bing] Websocket receive data: %s', data)
             sid = data['sid']
             q = data['q']
+            style = data.get('style', 'balanced')
             index = 0
             last_not_final_text = ''
-            async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle.creative):
+            async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle[style]):
                 final, res = response
                 if final:
                     processed_data = await process_data(res, q, sid, auto_reset=1)
@@ -147,8 +148,10 @@ async def reset_conversation(sid):
 
 async def do_chat(request):
     logger.info('[bing] Http request payload: %s', request.json)
+    style = request.json.get('style', 'balanced')
     return await get_bot(request.json.get('sid')).ask(
-        request.json.get('q'), conversation_style=ConversationStyle.creative
+        request.json.get('q'),
+        conversation_style=ConversationStyle[style],
     )
 
 
@@ -217,6 +220,16 @@ async def openid(request):
 # #########################################以下是openid接口##################################
 
 
+def get_temperature(style):
+    if style == ConversationStyle.balanced.name:
+        return 1
+    elif style == ConversationStyle.creative.name:
+        return 1.5
+    elif style == ConversationStyle.precise.name:
+        return 0.5
+    return 0.5
+
+
 @app.websocket('/ws_openai_chat')
 async def ws_openai_chat(_, ws):
     while True:
@@ -227,6 +240,7 @@ async def ws_openai_chat(_, ws):
             if not show_chatgpt(sid):
                 raise Exception('无权限访问此服务')
             q = data['q']
+            style = data.get('style', 'balanced')
             # 保存30个对话
             history_conversation = OPENAI_CONVERSATION[sid][-30:]
             history_conversation.append({
@@ -236,7 +250,7 @@ async def ws_openai_chat(_, ws):
             response = openai.ChatCompletion.create(
                 model='gpt-3.5-turbo',
                 messages=history_conversation,
-                temperature=0.8,
+                temperature=get_temperature(style),
                 stream=True,
             )
             chunks = []
@@ -281,6 +295,7 @@ async def openai_chat(request):
         if not show_chatgpt(sid):
             raise Exception('无权限访问此服务')
         q = request.json.get('q')
+        style = request.json.get('style', 'balanced')
         history_conversation = OPENAI_CONVERSATION[sid][-30:]
         history_conversation.append({
             'role': 'user',
@@ -289,7 +304,7 @@ async def openai_chat(request):
         response = openai.ChatCompletion.create(
             model='gpt-3.5-turbo',
             messages=history_conversation,
-            temperature=0.8,
+            temperature=get_temperature(style),
             stream=True,
         )
         chunks = []

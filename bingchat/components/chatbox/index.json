@@ -1,7 +1,8 @@
 {
   "component": true,
   "usingComponents": {
-		"mp-html": "mp-html",
-		"popup": "../popup/popup"
-	}
+    "mp-html": "mp-html",
+    "popup": "../popup/popup",
+    "quotes": "../quotes/quotes"
+  }
 }

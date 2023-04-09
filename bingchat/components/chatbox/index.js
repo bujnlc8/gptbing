@@ -2,7 +2,7 @@ const app = getApp()
 
 import {
   doRequest,
-  sid_prefix,
+  sidPrefix,
   systemInfo
 } from "../../config"
 
@@ -48,7 +48,7 @@ Component({
     showShare: false,
     loadingData: false,
     systemInfo: systemInfo,
-    height: systemInfo.windowHeight - parseInt(100 / 750 * systemInfo.windowWidth) - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : 5)
+    height: systemInfo.windowHeight - parseInt(100 / 750 * systemInfo.windowWidth) - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : 0)
   },
   methods: {
     bindscrolltoupper: function (e) {
@@ -68,7 +68,7 @@ Component({
           page = Math.ceil((that.data.chatList.length + 1) / 10)
         }
         doRequest("/query", "GET", {
-          "sid": sid_prefix + sid,
+          "sid": sidPrefix + sid,
           "page": page,
           "size": 10,
         }).then(res => {
@@ -93,7 +93,7 @@ Component({
             if (oldData.length < 10) {
               wx.setStorage({
                 key: "chatList",
-                data: newData.slice(newData.length - 10),
+                data: newData.slice(-10),
               })
             }
             if (filterData.length == 0 && e) {
@@ -149,7 +149,7 @@ Component({
             })
             app.getSid(sid => {
               doRequest("/delete", "POST", {
-                "sid": sid_prefix + sid,
+                "sid": sidPrefix + sid,
                 "conversation": deleteData
               }).then(res => {
                 console.log(res)
