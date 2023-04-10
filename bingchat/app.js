@@ -22,6 +22,7 @@ App({
       success: function (res) {
         var data = res.data
         if (data && data.length > 0) {
+          data = data.slice(-5)
           doRequest("/save", "POST", {
             "sid": sidPrefix + sid,
             "conversations": data

@@ -588,14 +588,18 @@ Page({
   longPress: function (e) {
     var that = this
     const cht = app.globalData.cht
-    var itemList = ["选择对话模式", "删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
+    var itemList = ["跳转收藏页面", "选择对话模式", "删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
     if ((app.globalData["saved"] && app.globalData["saved"] == 1) || that.data.chatType == "chatgpt") {
-      itemList = ["选择对话模式", "删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
+      itemList = ["跳转收藏页面", "选择对话模式", "删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
     }
     wx.showActionSheet({
       itemList: itemList,
       success(res) {
         if (res.tapIndex == 0) {
+          wx.redirectTo({
+            url: '/pages/collected/collected',
+          })
+        } else if (res.tapIndex == 1) {
           var items = ["更多创造力", "更多平衡", "更多精确"]
           items.forEach((v, k) => {
             if (that.data.chatStyle == chatStyleList[k]) {
@@ -620,11 +624,11 @@ Page({
               })
             }
           })
-        } else if (res.tapIndex == 1) {
-          that.deleteAllChat()
         } else if (res.tapIndex == 2) {
-          that.switchRequestMethod()
+          that.deleteAllChat()
         } else if (res.tapIndex == 3) {
+          that.switchRequestMethod()
+        } else if (res.tapIndex == 4) {
           if (cht.data.closeShareOnCopy) {
             cht.setData({
               closeShareOnCopy: false,
@@ -649,7 +653,7 @@ Page({
               data: 1,
             })
           }
-        } else if (res.tapIndex == 4) {
+        } else if (res.tapIndex == 5) {
           if (that.data.chatType == "chatgpt") {
             wx.removeStorage({
               key: "usechatgpt",
@@ -674,12 +678,12 @@ Page({
               icon: "none"
             })
           }
+          // 关闭websocket
+          that.onCancelReceive()
+          setTimeout(() => {
+            that.switchTitle()
+          }, 100)
         }
-        // 关闭websocket
-        that.onCancelReceive()
-        setTimeout(() => {
-          that.switchTitle()
-        }, 100)
       }
     })
   },

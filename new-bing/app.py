@@ -224,10 +224,10 @@ def get_temperature(style):
     if style == ConversationStyle.balanced.name:
         return 1
     elif style == ConversationStyle.creative.name:
-        return 1.5
+        return 1.2
     elif style == ConversationStyle.precise.name:
-        return 0.5
-    return 0.5
+        return 0.8
+    return 0.8
 
 
 @app.websocket('/ws_openai_chat')
@@ -261,7 +261,7 @@ async def ws_openai_chat(_, ws):
                     if 'content' in chunk_message:
                         chunks.append(chunk_message['content'])
                         index += 1
-                    if index % 3 == 1:
+                    if index % 2 == 1:
                         await ws.send(
                             raw_json.dumps({
                                 'final': False,
@@ -345,14 +345,30 @@ async def query(request):
 
 @app.post('/delete')
 async def delete(request):
-    conversation_ctr.delete(request.json.get('sid'), request.json.get('conversation'))
-    return json({})
+    num = conversation_ctr.delete(request.json.get('sid'), request.json.get('conversation'))
+    return json({'num': num})
 
 
 @app.post('/delete_all')
 async def delete_all(request):
     conversation_ctr.delete_all(request.json.get('sid'))
     return json({})
+
+
+@app.post('/collect')
+async def collect(request):
+    conversation_ctr.operate_collect(
+        request.json.get('sid'), request.json.get('conversation'), request.json.get('operate_type')
+    )
+    return json({})
+
+
+@app.route('/collect_query')
+async def collect_query(request):
+    data = conversation_ctr.get_collect_by_page(
+        request.args.get('sid'), int(request.args.get('page', '1')), int(request.args.get('size', '10'))
+    )
+    return json({'data': data})
 
 
 if __name__ == '__main__':

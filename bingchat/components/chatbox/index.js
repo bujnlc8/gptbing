@@ -24,11 +24,20 @@ Component({
     chatType: {
       type: String,
       value: "bing"
+    },
+    mode: {
+      type: String,
+      value: "normal"
     }
   },
   pageLifetimes: {
     show: function () {
       //this.initMessageHistory()
+      if (this.data.mode != "normal") {
+        this.setData({
+          height: systemInfo.windowHeight - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : 100)
+        })
+      }
     },
   },
   lifetimes: {
@@ -48,7 +57,7 @@ Component({
     showShare: false,
     loadingData: false,
     systemInfo: systemInfo,
-    height: systemInfo.windowHeight - parseInt(100 / 750 * systemInfo.windowWidth) - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : 0)
+    height: systemInfo.windowHeight - parseInt(100 / 750 * systemInfo.windowWidth) - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : -30)
   },
   methods: {
     bindscrolltoupper: function (e) {
@@ -60,14 +69,14 @@ Component({
         loadingData: true
       })
       wx.showLoading({
-        title: "加载历史记录...",
+        title: "加载记录...",
       })
       app.getSid(sid => {
         var page = 1
         if (that.data.chatList.length > 0) {
           page = Math.ceil((that.data.chatList.length + 1) / 10)
         }
-        doRequest("/query", "GET", {
+        doRequest(this.data.mode == "normal" ? "/query" : "/collect_query", "GET", {
           "sid": sidPrefix + sid,
           "page": page,
           "size": 10,
@@ -76,21 +85,36 @@ Component({
           data.reverse()
           var oldData = that.data.chatList
           var filterData = []
-          if (oldData.length > 0) {
+          if (that.data.mode == "normal") {
+            if (oldData.length > 0) {
+              data.forEach(k => {
+                if (k["dt"] < oldData[0]["dt"]) {
+                  filterData.push(k)
+                }
+              })
+            } else {
+              filterData = data
+            }
+          } else {
             data.forEach(k => {
-              if (k["dt"] < oldData[0]["dt"]) {
+              var exist = false
+              for (var i = 0; oldData.length; i++) {
+                if (k["dt"] == oldData[i]["dt"] && k["originContent"] == oldData[i]["originContent"]) {
+                  exist = true
+                  break
+                }
+              }
+              if (!exist) {
                 filterData.push(k)
               }
             })
-          } else {
-            filterData = data
           }
           var newData = filterData.concat(oldData)
           that.setData({
             chatList: newData,
             loadingData: false
           }, () => {
-            if (oldData.length < 10) {
+            if (oldData.length < 10 && that.data.mode == "normal") {
               wx.setStorage({
                 key: "chatList",
                 data: newData.slice(-10),
@@ -117,7 +141,7 @@ Component({
     initMessageHistory() {
       var that = this
       wx.getStorage({
-        key: "chatList",
+        key: that.data.mode == "normal" ? "chatList" : "chatListCollected",
         success: function (res) {
           var data = res.data
           data = data ? data : []
@@ -135,6 +159,9 @@ Component({
       })
     },
     clearChat: function (e) {
+      if (this.data.mode != "normal") {
+        return
+      }
       var that = this
       var index = e.currentTarget.dataset.index
       var data = this.data.chatList
@@ -143,16 +170,18 @@ Component({
         complete: (res) => {
           if (res.confirm) {
             var deleteData = data[index]
-            data.splice(index, 1)
-            that.setData({
-              chatList: data,
-            })
             app.getSid(sid => {
               doRequest("/delete", "POST", {
                 "sid": sidPrefix + sid,
                 "conversation": deleteData
               }).then(res => {
-                console.log(res)
+                if (res.data.num < 1 && deleteData['originContent'] != "搜索中🔍...") {
+                  return
+                }
+                data.splice(index, 1)
+                that.setData({
+                  chatList: data,
+                })
                 wx.setStorage({
                   key: "chatList",
                   data: data.slice(data.length - 10),
@@ -173,7 +202,7 @@ Component({
           wx.showToast({
             title: "复制成功",
           })
-          if (that.data.chatList[index]["type"] == "man" && !that.data.closeShareOnCopy) {
+          if (that.data.chatList[index]["type"] == "man" && !that.data.closeShareOnCopy && that.data.mode == "normal") {
             setTimeout(() => {
               that.setData({
                 showShare: true
@@ -217,6 +246,9 @@ Component({
       })
     },
     suggestSubmit: function (e) {
+      if (this.data.mode != "normal") {
+        return
+      }
       var suggest = e.currentTarget.dataset.suggest
       this.triggerEvent(
         "suggestSubmit", {
@@ -249,6 +281,73 @@ Component({
       }
       this.setData({
         showShare: false
+      })
+    },
+    operateCollect: function (e) {
+      var index = e.currentTarget.dataset.index
+      var that = this
+      var data = this.data.chatList[index]
+      var operateType = 1
+      if (data["collected"]) {
+        data["collected"] = false
+        operateType = 0
+      } else {
+        data["collected"] = true
+      }
+      app.getSid(sid => {
+        doRequest("/collect", "POST", {
+          sid: sidPrefix + sid,
+          conversation: data,
+          operate_type: operateType,
+        }).then(res => {
+          that.setData({
+            chatList: that.data.chatList
+          })
+          if (!data["collected"]) {
+            wx.showToast({
+              title: "取消成功",
+              icon: "none"
+            })
+          } else {
+            wx.showToast({
+              title: "收藏成功",
+              icon: "none"
+            })
+          }
+          if (that.data.mode == "normal") {
+            wx.setStorage({
+              key: "chatList",
+              data: that.data.chatList.slice(that.data.chatList.length - 10),
+            })
+          } else {
+            wx.getStorage({
+              key: "chatList",
+              success(res) {
+                var cached = res["data"]
+                cached.forEach(k => {
+                  if (k["dt"] == data["dt"] && k["originContent"] == data["originContent"]) {
+                    k["collected"] = data["collected"]
+                  }
+                })
+                wx.setStorage({
+                  key: "chatList",
+                  data: cached,
+                })
+              }
+            })
+            if (!data["collected"]) {
+              var oldData = that.data.chatList
+              oldData.forEach((k, v) => {
+                if (k["dt"] == data["dt"] && k["originContent"] == data["originContent"]) {
+                  oldData.splice(v, 1)
+                }
+              })
+              that.setData({
+                chatList: oldData,
+              })
+            }
+          }
+        })
       })
     }
   },

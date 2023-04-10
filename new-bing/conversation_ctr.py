@@ -16,6 +16,7 @@ class ConversationCtr:
     LAST_SYNC_TIME_KEY = 'bing:last_sync_time:%s'
     CONVERSATION_LIST_KEY = 'bing:conversation_list:%s'
     OPENAI_WHITE_LIST_KEY = 'bing:openai_white_list'
+    COLLECT_LIST_KEY = 'bing:collected_list:%s'
 
     def __init__(self, client=None) -> None:
         self.redis_client = client
@@ -33,23 +34,41 @@ class ConversationCtr:
         v = self.redis_client.get(key)
         return v.decode() if v else ''
 
-    def get_by_page(self, sid, page=1, size=20):
+    def normalize_data(self, conversation):
+        return {
+            'type': conversation['type'],
+            'avatarUrl': conversation['avatarUrl'],
+            'dt': conversation['dt'],
+            'originContent': conversation['originContent'],
+            'suggests': conversation['suggests'],
+            'blink': conversation['blink'],
+            'num_in_conversation': conversation['num_in_conversation'],
+        }
+
+    def get_by_page(self, sid, page=1, size=10):
         offset = size * (page - 1) if page > 0 else 0
         key = self.CONVERSATION_LIST_KEY % sid
-        return [json.loads(x) for x in self.redis_client.lrange(key, offset, offset + size - 1)]
+        res = [json.loads(x) for x in self.redis_client.lrange(key, offset, offset + size - 1)]
+        for x in res:
+            x['collected'] = self.redis_client.lpos(
+                self.COLLECT_LIST_KEY % sid, json.dumps(self.normalize_data(x))
+            ) is not None
+        return res
 
     def save(self, sid, conversations):
         _last_sync_time = self.get_last_sync_time(sid)
         conversations = [x for x in conversations if x['dt'] > _last_sync_time]
         if len(conversations) <= 0:
             return
+        conversations = [self.normalize_data(x) for x in conversations]
         key = self.CONVERSATION_LIST_KEY % sid
         self.redis_client.lpush(key, *[json.dumps(x) for x in conversations])
         self.redis_client.set(self.LAST_SYNC_TIME_KEY % sid, conversations[-1]['dt'])
 
     def delete(self, sid, conversation):
         key = self.CONVERSATION_LIST_KEY % sid
-        self.redis_client.lrem(key, 0, json.dumps(conversation))
+        conversation = self.normalize_data(conversation)
+        return self.redis_client.lrem(key, 0, json.dumps(conversation))
 
     def delete_all(self, sid):
         key = self.CONVERSATION_LIST_KEY % sid
@@ -57,6 +76,21 @@ class ConversationCtr:
 
     def get_openai_whitelist(self):
         return self.redis_client.lrange(self.OPENAI_WHITE_LIST_KEY, 0, 10000)
+
+    def operate_collect(self, sid, conversation, operate_type=1):
+        conversation = self.normalize_data(conversation)
+        if operate_type:
+            self.redis_client.lpush(self.COLLECT_LIST_KEY % sid, json.dumps(conversation))
+            return
+        self.redis_client.lrem(self.COLLECT_LIST_KEY % sid, 0, json.dumps(conversation))
+
+    def get_collect_by_page(self, sid, page=1, size=10):
+        offset = size * (page - 1) if page > 0 else 0
+        key = self.COLLECT_LIST_KEY % sid
+        res = [json.loads(x) for x in self.redis_client.lrange(key, offset, offset + size - 1)]
+        for x in res:
+            x['collected'] = True
+        return res
 
 
 conversation_ctr = ConversationCtr()

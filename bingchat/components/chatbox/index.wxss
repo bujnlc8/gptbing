@@ -102,4 +102,10 @@
   font-size: 18rpx;
   line-height: 2em;
   font-weight: bold;
+  cursor: pointer;
+}
+
+.conversation_num_collected {
+	background-color: #fc8c23 !important;
+	color: white;
 }
