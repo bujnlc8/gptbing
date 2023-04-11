@@ -337,11 +337,11 @@ Page({
     if (final) {
       app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 1))
     }
-    setTimeout(() => {
-      cht.setData({
-        scrollId: "item" + (autoIncrConversation + "9999"),
-      })
-    }, 100)
+    // setTimeout(() => {
+    //   cht.setData({
+    //     scrollId: "item" + (autoIncrConversation + "9999"),
+    //   })
+    // }, 100)
   },
   submit() {
     var content = this.data.content
@@ -588,16 +588,16 @@ Page({
   longPress: function (e) {
     var that = this
     const cht = app.globalData.cht
-    var itemList = ["跳转收藏页面", "选择对话模式", "删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
+    var itemList = ["跳转到收藏", "选择对话模式", "删除聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
     if ((app.globalData["saved"] && app.globalData["saved"] == 1) || that.data.chatType == "chatgpt") {
-      itemList = ["跳转收藏页面", "选择对话模式", "删除全部聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
+      itemList = ["跳转到收藏", "选择对话模式", "删除聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
     }
     wx.showActionSheet({
       itemList: itemList,
       success(res) {
         if (res.tapIndex == 0) {
           wx.redirectTo({
-            url: '/pages/collected/collected',
+            url: "/pages/collected/collected",
           })
         } else if (res.tapIndex == 1) {
           var items = ["更多创造力", "更多平衡", "更多精确"]
@@ -625,7 +625,26 @@ Page({
             }
           })
         } else if (res.tapIndex == 2) {
-          that.deleteAllChat()
+          wx.showActionSheet({
+            itemList: ["删除本机缓存", "删除全部记录"],
+            success: (res) => {
+              if (res.tapIndex == 0) {
+                app.upload_conversation()
+                setTimeout(() => {
+                  wx.removeStorage({
+                    key: "chatList",
+                    success: (res) => {
+                      wx.showToast({
+                        title: "删除成功",
+                      })
+                    }
+                  })
+                }, 1000)
+              } else {
+                that.deleteAllChat()
+              }
+            }
+          })
         } else if (res.tapIndex == 3) {
           that.switchRequestMethod()
         } else if (res.tapIndex == 4) {
