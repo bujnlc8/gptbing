@@ -33,7 +33,6 @@ else:
     BAK_COOKIE2 = os.environ.get('COOKIE_FILE3', COOKIE)
 
 LOCK = threading.Lock()
-bots = {}
 
 app = Sanic('new-bing')
 app.config.REQUEST_TIMEOUT = 900
@@ -41,8 +40,33 @@ app.config.RESPONSE_TIMEOUT = 900
 app.config.WEBSOCKET_PING_INTERVAL = 15
 app.config.WEBSOCKET_PING_TIMEOUT = 30
 
+bots = {}
+
 # openai conversation
 OPENAI_CONVERSATION = defaultdict(lambda: [])
+
+OPENAI_DEFAULT_PROMPT = {
+    'role': 'system',
+    'content': "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully. Respond using markdown."
+}
+
+
+def get_bot(sid):
+    if sid in bots:
+        record = bots[sid]
+        if record['expired'] > datetime.now():
+            return record['bot']
+    bot = Chatbot()
+    bots[sid] = {
+        'bot': bot,
+        'expired': datetime.now() + timedelta(hours=5, minutes=55),  # 会话有效期为6小时
+    }
+    return bot
+
+
+async def reset_conversation(sid):
+    await get_bot(sid).reset()
+    bots[sid]['expired'] = datetime.now() + timedelta(hours=5, minutes=55)
 
 
 def show_chatgpt(sid):
@@ -128,24 +152,6 @@ async def ws_chat(_, ws):
             }))
 
 
-def get_bot(sid):
-    if sid in bots:
-        record = bots[sid]
-        if record['expired'] > datetime.now():
-            return record['bot']
-    bot = Chatbot()
-    bots[sid] = {
-        'bot': bot,
-        'expired': datetime.now() + timedelta(hours=5, minutes=55),  # 会话有效期为6小时
-    }
-    return bot
-
-
-async def reset_conversation(sid):
-    await get_bot(sid).reset()
-    bots[sid]['expired'] = datetime.now() + timedelta(hours=5, minutes=55)
-
-
 async def do_chat(request):
     logger.info('[bing] Http request payload: %s', request.json)
     style = request.json.get('style', 'balanced')
@@ -222,12 +228,12 @@ async def openid(request):
 
 def get_temperature(style):
     if style == ConversationStyle.balanced.name:
-        return 1
+        return 0.6
     elif style == ConversationStyle.creative.name:
-        return 1.2
+        return 1
     elif style == ConversationStyle.precise.name:
-        return 0.8
-    return 0.8
+        return 0.2
+    return 0.2
 
 
 @app.websocket('/ws_openai_chat')
@@ -241,8 +247,9 @@ async def ws_openai_chat(_, ws):
                 raise Exception('无权限访问此服务')
             q = data['q']
             style = data.get('style', 'balanced')
-            # 保存30个对话
-            history_conversation = OPENAI_CONVERSATION[sid][-30:]
+            # 保存20个对话
+            history_conversation = OPENAI_CONVERSATION[sid][-20:]
+            history_conversation.insert(0, OPENAI_DEFAULT_PROMPT)
             history_conversation.append({
                 'role': 'user',
                 'content': q,
@@ -251,17 +258,15 @@ async def ws_openai_chat(_, ws):
                 model='gpt-3.5-turbo',
                 messages=history_conversation,
                 temperature=get_temperature(style),
+                presence_penalty=1,
                 stream=True,
             )
             chunks = []
-            index = 0
             for chunk in response:
                 chunk_message = chunk['choices'][0]['delta']
                 if chunk_message:
                     if 'content' in chunk_message:
                         chunks.append(chunk_message['content'])
-                        index += 1
-                    if index % 2 == 1:
                         await ws.send(
                             raw_json.dumps({
                                 'final': False,
@@ -296,7 +301,8 @@ async def openai_chat(request):
             raise Exception('无权限访问此服务')
         q = request.json.get('q')
         style = request.json.get('style', 'balanced')
-        history_conversation = OPENAI_CONVERSATION[sid][-30:]
+        history_conversation = OPENAI_CONVERSATION[sid][-20:]
+        history_conversation.insert(0, OPENAI_DEFAULT_PROMPT)
         history_conversation.append({
             'role': 'user',
             'content': q,
@@ -305,6 +311,7 @@ async def openai_chat(request):
             model='gpt-3.5-turbo',
             messages=history_conversation,
             temperature=get_temperature(style),
+            presence_penalty=1,
             stream=True,
         )
         chunks = []

@@ -20,17 +20,15 @@ App({
     wx.getStorage({
       key: "chatList",
       success: function (res) {
-        var data = res.data
-        if (data && data.length > 0) {
-          data = data.slice(-5)
-          doRequest("/save", "POST", {
-            "sid": sidPrefix + sid,
-            "conversations": data
-          }).then(res => {
-            that.globalData["saved"] = res.data["saved"]
-            console.log("upload " + data.length + " conversations success!")
-          })
-        }
+        var data = res.data || []
+        data = data.slice(-5)
+        doRequest("/save", "POST", {
+          "sid": sidPrefix + sid,
+          "conversations": data
+        }).then(res => {
+          that.globalData["saved"] = res.data["saved"]
+          console.log("upload " + data.length + " conversations success!")
+        })
       }
     })
   },

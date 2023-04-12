@@ -148,6 +148,7 @@ Page({
     if (options && options["q"]) {
       var q = decodeURIComponent(options["q"])
       var chatType = this.data.chatType
+      var chatStyle = this.data.chatStyle
       if (options["chatType"]) {
         chatType = options["chatType"]
         // 聊天方式不同，关闭websocket
@@ -155,11 +156,15 @@ Page({
           this.onCancelReceive()
         }
       }
+      if (options["chatStyle"]) {
+        chatStyle = options["chatStyle"]
+      }
       this.setData({
         searchPopMessage: "即将搜索“" + q + "”",
         showSearchPop: true,
         q: q,
         chatType: chatType,
+        chatStyle: chatStyle,
       })
     }
     // 切换title
@@ -337,11 +342,11 @@ Page({
     if (final) {
       app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 1))
     }
-    // setTimeout(() => {
-    //   cht.setData({
-    //     scrollId: "item" + (autoIncrConversation + "9999"),
-    //   })
-    // }, 100)
+    setTimeout(() => {
+      cht.setData({
+        scrollId: "item" + (autoIncrConversation + "9999"),
+      })
+    }, 100)
   },
   submit() {
     var content = this.data.content
@@ -369,8 +374,8 @@ Page({
     }
     return {
       title: title,
-      path: "/pages/index/index?q=" + encodeURIComponent(content) + "&chatType=" + this.data.chatType,
-      imageUrl: this.data.chatType == "bing" ? "../../image/newBing.png" : "../../image/chatgpt_share.png"
+      path: "/pages/index/index?q=" + encodeURIComponent(content) + "&chatType=" + this.data.chatType + "&chatStyle=" + this.data.chatStyle,
+      imageUrl: this.data.chatType == "bing" ? "../../image/newBing.png" : "../../image/chatgptShare.png"
     }
   },
   onSuggestSubmit: function (e) {
@@ -446,6 +451,12 @@ Page({
     })
     socket.onMessage(data => {
       const cht = app.globalData.cht
+      if (!this.data.socket.isOpen) {
+        cht.setData({
+          receiveData: false
+        })
+        return
+      }
       var data = JSON.parse(data.data)
       var suggests = []
       var robContent = ""
@@ -524,10 +535,22 @@ Page({
   },
   onCancelReceive: function (e) {
     if (this.data.socket.isOpen) {
+      this.setData({
+        socket: {
+          socket: this.data.socket.socket,
+          isOpen: false
+        },
+        searching: false
+      })
       this.data.socket.socket.close({
         code: 1000,
-        reason: "User cancel"
+        reason: "User Cancel"
       })
+      const cht = app.globalData.cht
+      cht.setData({
+        receiveData: false
+      })
+      app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 1))
     }
   },
   switchRequestMethod: function (e) {
@@ -634,12 +657,15 @@ Page({
                   wx.removeStorage({
                     key: "chatList",
                     success: (res) => {
+                      cht.setData({
+                        chatList: []
+                      })
                       wx.showToast({
                         title: "删除成功",
                       })
                     }
                   })
-                }, 1000)
+                }, 500)
               } else {
                 that.deleteAllChat()
               }
