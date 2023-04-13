@@ -19,8 +19,14 @@ function doRequest(url, method = "GET", data = {}) {
     })
   })
 }
+const systemInfo = wx.getSystemInfoSync()
+
+const sidPrefix = (systemInfo.platform == 'ios' || systemInfo.platform == 'android') ? '' : systemInfo.platform
+
 export {
   doRequest,
   SERVER_HOST,
-  SERVER_WSS_HOST
+  SERVER_WSS_HOST,
+  systemInfo,
+  sidPrefix,
 }

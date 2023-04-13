@@ -1,4 +1,6 @@
 // pages/collected/collected.js
+const app = getApp()
+
 Page({
 
   /**
@@ -25,6 +27,12 @@ Page({
     wx.setNavigationBarTitle({
       title: '收藏',
     })
+    const cht = app.globalData.cht
+    setTimeout(() => {
+      cht.setData({
+        scrollId: "item19999",
+      })
+    }, 100)
   },
 
   /**

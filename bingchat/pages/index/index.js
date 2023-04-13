@@ -340,7 +340,7 @@ Page({
       data: cht.data.chatList.slice(cht.data.chatList.length - 10),
     })
     if (final) {
-      app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 1))
+      app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 3))
     }
     setTimeout(() => {
       cht.setData({
@@ -550,7 +550,7 @@ Page({
       cht.setData({
         receiveData: false
       })
-      app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 1))
+      app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 3))
     }
   },
   switchRequestMethod: function (e) {
