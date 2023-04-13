@@ -15,6 +15,7 @@ from sanic.response import json
 
 from conversation_ctr import conversation_ctr
 from EdgeGPT import Chatbot, ConversationStyle
+from BingImageCreator import async_image_gen
 
 APPID = os.environ.get('WXAPPID')
 APPSECRET = os.environ.get('WXAPPSECRET')
@@ -107,6 +108,16 @@ def make_response_data(status, text, suggests, message, num_in_conversation=-1):
     }
 
 
+async def generate_image(q):
+    resp = []
+    if q and q.startswith('图片#') and q[3:].strip():
+        imgaes = await async_image_gen(q[3:].strip())
+        resp = ['生成的图片如下：']
+        for i, link in enumerate(imgaes):
+            resp.append(f'![image {i + 1}]({link})')
+    return '\n'.join(resp)
+
+
 @app.websocket('/chat')
 async def ws_chat(_, ws):
     while True:
@@ -118,6 +129,13 @@ async def ws_chat(_, ws):
             style = data.get('style', 'balanced')
             index = 0
             last_not_final_text = ''
+            resp = await generate_image(q)
+            if resp:
+                await ws.send(raw_json.dumps({
+                    'final': True,
+                    'data': make_response_data('Success', resp, [], '')
+                }))
+                continue
             async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle[style]):
                 final, res = response
                 if final:
@@ -198,6 +216,10 @@ async def process_data(res, q, sid, auto_reset=None):
 
 @app.post('/chat')
 async def chat(request):
+    q = request.json.get('q', '')
+    resp = await generate_image(q)
+    if resp:
+        return json(make_response_data('Success', resp, [], ''))
     res = await do_chat(request)
     auto_reset = request.json.get('auto_reset', '')
     sid = request.json.get('sid')
@@ -246,6 +268,13 @@ async def ws_openai_chat(_, ws):
             if not show_chatgpt(sid):
                 raise Exception('无权限访问此服务')
             q = data['q']
+            resp = await generate_image(q)
+            if resp:
+                await ws.send(raw_json.dumps({
+                    'final': True,
+                    'data': make_response_data('Success', resp, [], '')
+                }))
+                continue
             style = data.get('style', 'balanced')
             # 保存20个对话
             history_conversation = OPENAI_CONVERSATION[sid][-20:]
@@ -300,6 +329,9 @@ async def openai_chat(request):
         if not show_chatgpt(sid):
             raise Exception('无权限访问此服务')
         q = request.json.get('q')
+        resp = await generate_image(q)
+        if resp:
+            return json(make_response_data('Success', resp, [], ''))
         style = request.json.get('style', 'balanced')
         history_conversation = OPENAI_CONVERSATION[sid][-20:]
         history_conversation.insert(0, OPENAI_DEFAULT_PROMPT)

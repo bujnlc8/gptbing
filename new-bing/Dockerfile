@@ -2,7 +2,7 @@ FROM sanicframework/sanic:3.11-latest
 
 WORKDIR /sanic
 
-COPY app.py EdgeGPT.py conversation_ctr.py requirements.txt /sanic/
+COPY app.py EdgeGPT.py BingImageCreator.py conversation_ctr.py requirements.txt /sanic/
 
 RUN pip install -r requirements.txt
 
