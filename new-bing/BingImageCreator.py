@@ -6,22 +6,34 @@ import aiohttp
 import regex
 import requests
 
-from EdgeGPT import FORWARDED_IP
-
 BING_URL = "https://www.bing.com"
 
 HEADERS = {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "accept-language": "en-US,en;q=0.9",
-    "cache-control": "max-age=0",
-    "content-type": "application/x-www-form-urlencoded",
-    "referrer": "https://www.bing.com/images/create/",
-    "origin": "https://www.bing.com",
-    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36 Edg/111.0.1661.43",
-    "x-forwarded-for": FORWARDED_IP,
+    'authority': 'www.bing.com',
+    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6,mt;q=0.5',
+    'cache-control': 'max-age=0',
+    'origin': 'https://www.bing.com',
+    'referer': 'https://www.bing.com/images/create?FORM=GENILP',
+    'sec-ch-ua': '"Chromium";v="112", "Microsoft Edge";v="112", "Not:A-Brand";v="99"',
+    'sec-ch-ua-arch': '"x86"',
+    'sec-ch-ua-bitness': '"64"',
+    'sec-ch-ua-full-version': '"112.0.1722.48"',
+    'sec-ch-ua-full-version-list': '"Chromium";v="112.0.5615.121", "Microsoft Edge";v="112.0.1722.48", "Not:A-Brand";v="99.0.0.0"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-model': '""',
+    'sec-ch-ua-platform': '"macOS"',
+    'sec-ch-ua-platform-version': '"11.7.6"',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'same-origin',
+    'sec-fetch-user': '?1',
+    'sec-ms-gec': 'BA74B980CD7362F853CAF5B6FB737DD3157933A56C2D47A6BA47EDEECCCA42FA',
+    'sec-ms-gec-version': '1-112.0.1722.48',
+    'upgrade-insecure-requests': '1',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.48',
+    'x-forwarded-for': '1.1.1.1',
 }
-
-setattr(asyncio.sslproto._SSLProtocolTransport, "_start_tls_compatible", True)
 
 
 class ImageGenAsync:
@@ -107,8 +119,9 @@ class ImageGenAsync:
             "https://r.bing.com/rp/TX9QuO3WzcCJz1uaaSwQAz39Kb0.jpg",
         ]
         for im in normal_image_links:
-            if im in bad_images:
-                raise Exception("Bad images")
+            for x in bad_images:
+                if im in x:
+                    raise Exception("Bad images")
         # No images
         if not normal_image_links:
             raise Exception("No images")

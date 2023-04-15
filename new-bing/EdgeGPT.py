@@ -6,6 +6,7 @@ import os
 import random
 import ssl
 import uuid
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Generator, Literal, Optional, Union
 
@@ -74,9 +75,51 @@ class NotAllowedToAccess(Exception):
 
 
 class ConversationStyle(Enum):
-    creative = "h3relaxedimg"
-    balanced = "galileo"
-    precise = "h3precise"
+    creative = [
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+        "h3imaginative",
+        "enbcdxpgpsr2",
+        "cachewriteext",
+        "e2ecachewrite",
+        "nodlcpcwrite",
+        "sportsansgnd",
+        "dv3sugg",
+        "clgalileo",
+        "gencontentv3",
+    ]
+    balanced = [
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+        "galileo",
+        "enbcdxpgpsr2",
+        "cachewriteext",
+        "e2ecachewrite",
+        "nodlcpcwrite",
+        "sportsansgnd",
+        "dv3sugg",
+    ]
+    precise = [
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+        "h3precise",
+        "enbcdxpgpsr2",
+        "cachewriteext",
+        "e2ecachewrite",
+        "nodlcpcwrite",
+        "sportsansgnd",
+        "dv3sugg",
+        "clgalileo",
+    ]
 
 
 CONVERSATION_STYLE_TYPE = Optional[Union[ConversationStyle, Literal["creative", "balanced", "precise"]]]
@@ -90,11 +133,11 @@ def append_identifier(msg: dict) -> str:
     return json.dumps(msg) + DELIMITER
 
 
-def getRanHex(length: int = 32) -> str:
+def get_rand_hex(length: int = 32) -> str:
     """
     Returns random hex string
     """
-    return "".join(random.choice("0123456789abcdef") for i in range(length))
+    return "".join(random.choice("0123456789abcdef") for _ in range(length))
 
 
 class ChatHubRequest:
@@ -135,31 +178,65 @@ class ChatHubRequest:
         if conversation_style:
             if not isinstance(conversation_style, ConversationStyle):
                 conversation_style = getattr(ConversationStyle, conversation_style)
-            options = [
-                "nlu_direct_response_filter",
-                "deepleo",
-                "disable_emoji_spoken_text",
-                "responsible_ai_policy_235",
-                "enablemm",
-                conversation_style.value,
-                "dtappid",
-                "cricinfo",
-                "cricinfov2",
-                "dv3sugg",
-            ]
+            options = conversation_style.value
         self.struct = {
             "arguments": [
                 {
                     "source": "cib",
                     "optionsSets": options,
-                    "sliceIds": [
-                        "222dtappid",
-                        "225cricinfo",
-                        "224locals0",
+                    "allowedMessageTypes": [
+                        "Chat",
                     ],
-                    "traceId": getRanHex(32),
+                    "sliceIds": [
+                        "winmuid3tf",
+                        "contctxp2tf",
+                        "ssoverlap50",
+                        "sspltop5",
+                        "sswebtop1",
+                        "audrngoncf",
+                        "audseq",
+                        "nopreloadsstf",
+                        "winlongmsg2tf",
+                        "wpcssopt",
+                        "creatgoglt2",
+                        "creatorv2t",
+                        "0404sydiconbf",
+                        "0415bficons0",
+                        "407pgparser",
+                        "0329resps0",
+                        "udscahrfon",
+                        "udstrblm8",
+                        "414jbfv202s0",
+                        "404e2ewrt",
+                        "0417rediss0",
+                        "403recansgnds0",
+                        "406sportgnd",
+                    ],
+                    "verbosity": "verbose",
+                    "traceId": get_rand_hex(32),
                     "isStartOfSession": self.invocation_id == 0,
                     "message": {
+                        "locale": "zh-CN",
+                        "market": "zh-CN",
+                        "region": "US",
+                        "location": "lat:47.639557;long:-122.128159;re=1000m;",
+                        "locationHints": [{
+                            "country": "United States",
+                            "state": "California",
+                            "city": "Los Angeles",
+                            "zipcode": "90014",
+                            "timezoneoffset": -8,
+                            "dma": 803,
+                            "countryConfidence": 8,
+                            "cityConfidence": 5,
+                            "Center": {
+                                "Latitude": 34.0448,
+                                "Longitude": -118.2527
+                            },
+                            "RegionType": 2,
+                            "SourceType": 1
+                        }],
+                        "timestamp": (datetime.now() - timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M:%S+08:00'),
                         "author": "user",
                         "inputMethod": "Keyboard",
                         "text": prompt,
@@ -217,7 +294,7 @@ class Conversation:
 
         # Send GET request
         response = self.session.get(
-            url=os.environ.get("BING_PROXY_URL") or "https://edgeservices.bing.com/edgesvc/turing/conversation/create"
+            url=os.environ.get("BING_PROXY_URL") or "https://www.bing.com/turing/conversation/create"
         )
         if response.status_code != 200:
             response = self.session.get("https://edge.churchless.tech/edgesvc/turing/conversation/create")

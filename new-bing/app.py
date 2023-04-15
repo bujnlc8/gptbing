@@ -51,6 +51,20 @@ OPENAI_DEFAULT_PROMPT = {
     'content': "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully. Respond using markdown."
 }
 
+HIDDEN_TEXTS = [
+    '实在不好意思，我现在无法对此做出回应。',
+    '实在抱歉，我现在无法回答这个问题。',
+    '嗯……对于这个问题很抱歉',
+    'try a different topic.',
+]
+
+
+def check_hidden(text):
+    for x in HIDDEN_TEXTS:
+        if x in text:
+            return True
+    return False
+
 
 def get_bot(sid):
     if sid in bots:
@@ -145,7 +159,7 @@ async def ws_chat(_, ws):
                         await reset_conversation(sid)
                         processed_data['data']['suggests'].append(q)
                     # 屏蔽 My mistake, I can’t give a response to that right now. Let’s try a different topic.
-                    if last_not_final_text and 'try a different topic.' in processed_data['data']['text']:
+                    if last_not_final_text and check_hidden(processed_data['data']['text']):
                         processed_data = make_response_data(
                             'Success', last_not_final_text, [], '', processed_data['data']['num_in_conversation']
                         )
@@ -155,12 +169,12 @@ async def ws_chat(_, ws):
                     }))
                 else:
                     index += 1
-                    if index % 2 == 1 and 'try a different topic.' not in res:
+                    if index % 2 == 1 and not check_hidden(res):
                         await ws.send(raw_json.dumps({
                             'final': final,
                             'data': res
                         }))
-                    if 'try a different topic.' not in res:
+                    if not check_hidden(res):
                         last_not_final_text = res
         except Exception as e:
             logger.error(e)
