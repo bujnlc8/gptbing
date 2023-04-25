@@ -1,1 +1,1 @@
-<chat-box  mode="collected"></chat-box>
+<chat-box  mode="collected" id="collected-id"></chat-box>

@@ -182,7 +182,7 @@ Page({
     }
   },
   scrollBottom: function () {
-    const cht = app.globalData.cht
+    var cht = this.selectComponent("#chat-id")
     if (cht.data.chatList.length > 1 && !this.data.textareaFocus) {
       cht.setData({
         scrollId: "item" + (cht.data.chatList.length - 2),
@@ -190,7 +190,7 @@ Page({
     }
   },
   onLoad() {
-    const cht = app.globalData.cht
+    var cht = this.selectComponent("#chat-id")
     setTimeout(() => {
       if (cht.data.chatList.length > 1) {
         cht.setData({
@@ -244,7 +244,7 @@ Page({
   },
   sendHttpRequest: function (content) {
     var that = this
-    const cht = app.globalData.cht
+    var cht = this.selectComponent("#chat-id")
     var api = that.data.chatType == "bing" ? "/chat" : "/openai_chat"
     app.getSid(sid => {
       doRequest(api, "POST", {
@@ -290,7 +290,7 @@ Page({
       })
     }
     var that = this
-    const cht = app.globalData.cht
+    var cht = this.selectComponent("#chat-id")
     that.pushStorageMessage(cht, content, "man", [], false)
     that.setData({
       content: "",
@@ -392,7 +392,7 @@ Page({
       return
     }
     var that = this
-    const cht = app.globalData.cht
+    var cht = this.selectComponent("#chat-id")
     var apiPath = that.data.chatType == "bing" ? "/chat" : "/ws_openai_chat"
     const socket = wx.connectSocket({
       url: SERVER_WSS_HOST + apiPath,
@@ -450,7 +450,7 @@ Page({
       })
     })
     socket.onMessage(data => {
-      const cht = app.globalData.cht
+      var cht = this.selectComponent("#chat-id")
       if (!this.data.socket.isOpen) {
         cht.setData({
           receiveData: false
@@ -546,7 +546,7 @@ Page({
         code: 1000,
         reason: "User Cancel"
       })
-      const cht = app.globalData.cht
+      var cht = this.selectComponent("#chat-id")
       cht.setData({
         receiveData: false
       })
@@ -585,7 +585,7 @@ Page({
     }
   },
   deleteAllChat: function () {
-    const cht = app.globalData.cht
+    var cht = this.selectComponent("#chat-id")
     wx.showModal({
       content: "是否删除全部聊天？",
       complete: (res) => {
@@ -610,7 +610,7 @@ Page({
   },
   longPress: function (e) {
     var that = this
-    const cht = app.globalData.cht
+    var cht = this.selectComponent("#chat-id")
     var itemList = ["跳转到收藏", "选择对话模式", "删除聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
     if ((app.globalData["saved"] && app.globalData["saved"] == 1) || that.data.chatType == "chatgpt") {
       itemList = ["跳转到收藏", "选择对话模式", "删除聊天记录", "切换聊天接口方式", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
@@ -619,7 +619,7 @@ Page({
       itemList: itemList,
       success(res) {
         if (res.tapIndex == 0) {
-          wx.redirectTo({
+          wx.navigateTo({
             url: "/pages/collected/collected",
           })
         } else if (res.tapIndex == 1) {

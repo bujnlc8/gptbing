@@ -42,7 +42,6 @@ Component({
   },
   lifetimes: {
     attached() {
-      app.globalData.cht = this
       this.initMessageHistory()
     },
     detached() {

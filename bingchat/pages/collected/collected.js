@@ -27,7 +27,7 @@ Page({
     wx.setNavigationBarTitle({
       title: '收藏',
     })
-    const cht = app.globalData.cht
+    var cht = this.selectComponent("#collected-id")
     setTimeout(() => {
       cht.setData({
         scrollId: "item19999",

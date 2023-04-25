@@ -42,7 +42,7 @@ HEADERS = {
     "x-forwarded-for": FORWARDED_IP,
 }
 
-HEADERS_INIT_CONVER = {
+HEADERS_INIT = {
     "authority": "edgeservices.bing.com",
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "accept-language": "en-US,en;q=0.9",
@@ -82,14 +82,15 @@ class ConversationStyle(Enum):
         "responsible_ai_policy_235",
         "enablemm",
         "h3imaginative",
-        "enbcdxpgpsr2",
-        "cachewriteext",
-        "e2ecachewrite",
-        "nodlcpcwrite",
-        "sportsansgnd",
-        "dv3sugg",
         "clgalileo",
         "gencontentv3",
+        "h3bsimagin",
+        "serploc",
+        "enbcdxpgpsr2",
+        "healthansgnd",
+        "rchlthalwlst",
+        "dlreldeav2",
+        "dv3sugg",
     ]
     balanced = [
         "nlu_direct_response_filter",
@@ -98,11 +99,11 @@ class ConversationStyle(Enum):
         "responsible_ai_policy_235",
         "enablemm",
         "galileo",
+        "serploc",
         "enbcdxpgpsr2",
-        "cachewriteext",
-        "e2ecachewrite",
-        "nodlcpcwrite",
-        "sportsansgnd",
+        "healthansgnd",
+        "rchlthalwlst",
+        "dlreldeav2",
         "dv3sugg",
     ]
     precise = [
@@ -112,13 +113,14 @@ class ConversationStyle(Enum):
         "responsible_ai_policy_235",
         "enablemm",
         "h3precise",
+        "serploc",
         "enbcdxpgpsr2",
-        "cachewriteext",
-        "e2ecachewrite",
-        "nodlcpcwrite",
-        "sportsansgnd",
+        "healthansgnd",
+        "rchlthalwlst",
+        "dlreldeav2",
         "dv3sugg",
         "clgalileo",
+        "h3bsprecise",
     ]
 
 
@@ -190,27 +192,29 @@ class ChatHubRequest:
                     "sliceIds": [
                         "winmuid3tf",
                         "contctxp2tf",
+                        "bcsrcf",
                         "ssoverlap50",
                         "sspltop5",
                         "sswebtop1",
-                        "audrngoncf",
-                        "audseq",
+                        "ttstmout",
                         "nopreloadsstf",
+                        "rrsupp17",
                         "winlongmsg2tf",
                         "wpcssopt",
                         "creatgoglt2",
                         "creatorv2t",
-                        "0404sydiconbf",
+                        "277beacon",
                         "0415bficons0",
+                        "418bs",
+                        "420langdsats0",
+                        "321sloc",
                         "407pgparser",
                         "0329resps0",
+                        "418rchlth",
+                        "asfixescf",
                         "udscahrfon",
-                        "udstrblm8",
                         "414jbfv202s0",
-                        "404e2ewrt",
-                        "0417rediss0",
-                        "403recansgnds0",
-                        "406sportgnd",
+                        "420deav2",
                     ],
                     "verbosity": "verbose",
                     "traceId": get_rand_hex(32),
@@ -279,7 +283,7 @@ class Conversation:
         self.session = httpx.Client(
             proxies=proxy,
             timeout=120,
-            headers=HEADERS_INIT_CONVER,
+            headers=HEADERS_INIT,
         )
         if cookies is not None:
             cookie_file = cookies

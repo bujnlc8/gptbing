@@ -10,12 +10,14 @@ from datetime import datetime, timedelta
 import openai
 import requests
 from sanic import Sanic
+
 from sanic.log import logger
 from sanic.response import json
 
+from BingImageCreator import async_image_gen
+
 from conversation_ctr import conversation_ctr
 from EdgeGPT import Chatbot, ConversationStyle
-from BingImageCreator import async_image_gen
 
 APPID = os.environ.get('WXAPPID')
 APPSECRET = os.environ.get('WXAPPSECRET')
@@ -141,7 +143,6 @@ async def ws_chat(_, ws):
             sid = data['sid']
             q = data['q']
             style = data.get('style', 'balanced')
-            index = 0
             last_not_final_text = ''
             resp = await generate_image(q)
             if resp:
@@ -158,7 +159,7 @@ async def ws_chat(_, ws):
                         reset_cookie()
                         await reset_conversation(sid)
                         processed_data['data']['suggests'].append(q)
-                    # 屏蔽 My mistake, I can’t give a response to that right now. Let’s try a different topic.
+                    # 取消New Bing隐藏敏感内容
                     if last_not_final_text and check_hidden(processed_data['data']['text']):
                         processed_data = make_response_data(
                             'Success', last_not_final_text, [], '', processed_data['data']['num_in_conversation']
@@ -168,14 +169,12 @@ async def ws_chat(_, ws):
                         'data': processed_data
                     }))
                 else:
-                    index += 1
-                    if index % 2 == 1 and not check_hidden(res):
+                    if not check_hidden(res):
+                        last_not_final_text = res
                         await ws.send(raw_json.dumps({
                             'final': final,
                             'data': res
                         }))
-                    if not check_hidden(res):
-                        last_not_final_text = res
         except Exception as e:
             logger.error(e)
             await ws.send(raw_json.dumps({
