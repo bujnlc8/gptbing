@@ -6,7 +6,6 @@ import os
 import random
 import ssl
 import uuid
-from datetime import datetime, timedelta
 from enum import Enum
 from typing import Generator, Literal, Optional, Union
 
@@ -198,12 +197,11 @@ class ChatHubRequest:
                         "sswebtop1",
                         "ttstmout",
                         "nopreloadsstf",
-                        "rrsupp17",
+                        "rrsupp16",
                         "winlongmsg2tf",
                         "wpcssopt",
                         "creatgoglt2",
                         "creatorv2t",
-                        "277beacon",
                         "0415bficons0",
                         "418bs",
                         "420langdsats0",
@@ -213,34 +211,12 @@ class ChatHubRequest:
                         "418rchlth",
                         "asfixescf",
                         "udscahrfon",
-                        "414jbfv202s0",
                         "420deav2",
                     ],
                     "verbosity": "verbose",
                     "traceId": get_rand_hex(32),
                     "isStartOfSession": self.invocation_id == 0,
                     "message": {
-                        "locale": "zh-CN",
-                        "market": "zh-CN",
-                        "region": "US",
-                        "location": "lat:47.639557;long:-122.128159;re=1000m;",
-                        "locationHints": [{
-                            "country": "United States",
-                            "state": "California",
-                            "city": "Los Angeles",
-                            "zipcode": "90014",
-                            "timezoneoffset": -8,
-                            "dma": 803,
-                            "countryConfidence": 8,
-                            "cityConfidence": 5,
-                            "Center": {
-                                "Latitude": 34.0448,
-                                "Longitude": -118.2527
-                            },
-                            "RegionType": 2,
-                            "SourceType": 1
-                        }],
-                        "timestamp": (datetime.now() - timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M:%S+08:00'),
                         "author": "user",
                         "inputMethod": "Keyboard",
                         "text": prompt,
@@ -368,6 +344,7 @@ class ChatHub:
                     yield False, resp_txt
                 elif response.get("type") == 2:
                     final = True
+                    print(response)
                     yield True, response
 
     async def __initial_handshake(self):

@@ -3,20 +3,20 @@
   justify-content: flex-start;
   flex-wrap: wrap;
   background-color: #f4f6f8;
-  border-radius: 0rpx 16rpx 0rpx 16rpx;
-  padding: 10rpx 16rpx 10rpx 16rpx;
-  margin-top: -16rpx;
+  border-radius: 0px 10px 0px 10px;
+  padding: 6px 10px 6px 10px;
+  margin-top: -10px;
 }
 
 .quote-item {
   background-color: #D1DBFA;
   display: inline-block;
-  padding: 5rpx;
-  border-radius: 8rpx;
-  margin-right: 10rpx;
+  padding: 3px;
+  border-radius: 5px;
+  margin-right: 6px;
   color: #123BB6;
-  margin-bottom: 10rpx;
-  font-size: 24rpx;
+  margin-bottom: 6px;
+  font-size: 12px;
   cursor: pointer;
   word-break: break-all;
   min-width: 100%;

@@ -28,14 +28,18 @@ Component({
     mode: {
       type: String,
       value: "normal"
-    }
+		},
+		showPrevBt: {
+			type: Boolean,
+			value: false
+		}
   },
   pageLifetimes: {
     show: function () {
       //this.initMessageHistory()
       if (this.data.mode != "normal") {
         this.setData({
-          height: systemInfo.windowHeight - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : 100)
+          height: systemInfo.windowHeight - 15,
         })
       }
     },
@@ -56,7 +60,7 @@ Component({
     showShare: false,
     loadingData: false,
     systemInfo: systemInfo,
-    height: systemInfo.windowHeight - parseInt(100 / 750 * systemInfo.windowWidth) - ((systemInfo.platform == "ios" || systemInfo.platform == "android") ? 22 : -30)
+    height: systemInfo.windowHeight - 75
   },
   methods: {
     bindscrolltoupper: function (e) {
@@ -96,9 +100,9 @@ Component({
             }
           } else {
             data.forEach(k => {
-              var exist = false
-              for (var i = 0; oldData.length; i++) {
-                if (k["dt"] == oldData[i]["dt"] && k["originContent"] == oldData[i]["originContent"]) {
+							var exist = false
+              for (var i = 0; i < oldData.length; i++) {
+                if (k && k["dt"] == oldData[i]["dt"] && k["originContent"] == oldData[i]["originContent"]) {
                   exist = true
                   break
                 }

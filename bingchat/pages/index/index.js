@@ -5,7 +5,7 @@ import {
   sidPrefix
 } from "../../config"
 
-const initHeight = inputPop() ? 22 : 5
+const initHeight = inputPop() ? 15 : 2
 // 是否使用websocket请求
 var useWebsocket = true
 try {
@@ -619,7 +619,7 @@ Page({
       itemList: itemList,
       success(res) {
         if (res.tapIndex == 0) {
-          wx.navigateTo({
+          wx.redirectTo({
             url: "/pages/collected/collected",
           })
         } else if (res.tapIndex == 1) {
@@ -638,13 +638,16 @@ Page({
                 icon: "none"
               })
               var chatStyle = chatStyleList[res.tapIndex]
-              that.setData({
-                chatStyle: chatStyle
-              })
-              wx.setStorage({
-                key: "chatStyle",
-                data: chatStyle,
-              })
+              if (that.data.chatStyle != chatStyle) {
+                that.resetConversation()
+                that.setData({
+                  chatStyle: chatStyle
+                })
+                wx.setStorage({
+                  key: "chatStyle",
+                  data: chatStyle,
+                })
+              }
             }
           })
         } else if (res.tapIndex == 2) {

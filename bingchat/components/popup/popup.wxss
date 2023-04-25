@@ -5,8 +5,8 @@
   width: 76%;
   background-color: #f4f6f8;
   text-align: center;
-  border-radius: 25rpx;
-  padding: 20rpx 30rpx 20rpx 30rpx;
+  border-radius: 14px;
+  padding: 12px 17px 12px 17px;
   box-sizing: border-box;
   z-index: 10000;
   border: 1px dashed;
@@ -14,18 +14,18 @@
 
 .bt {
   background-color: #f4f6f8;
-  font-size: 32rpx;
+  font-size: 18px;
   cursor: pointer;
 }
 
 .title {
-  font-size: 30rpx;
+  font-size: 17px;
   font-weight: 700;
 }
 
 .message {
-  font-size: 30rpx;
-  margin-top: 15rpx;
+  font-size: 17px;
+  margin-top: 8px;
   color: #161823;
   line-height: 1.6em;
   max-height: 4.8em;
@@ -40,7 +40,7 @@
   background-color: #f4f6f8;
   display: flex;
   flex-direction: row;
-  margin-top: 15rpx;
+  margin-top: 8px;
 }
 
 .btn-click {
