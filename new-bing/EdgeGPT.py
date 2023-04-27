@@ -6,12 +6,15 @@ import os
 import random
 import ssl
 import uuid
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Generator, Literal, Optional, Union
 
 import certifi
 import httpx
 import websockets.client as websockets
+
+from logger import logger
 
 DELIMITER = "\x1e"
 
@@ -81,15 +84,16 @@ class ConversationStyle(Enum):
         "responsible_ai_policy_235",
         "enablemm",
         "h3imaginative",
+        "serploc",
+        "dlreldeav2",
+        "enbfpr",
+        "jb095",
+        "jbfv1",
+        "nojbfedge",
+        "dv3sugg",
         "clgalileo",
         "gencontentv3",
         "h3bsimagin",
-        "serploc",
-        "enbcdxpgpsr2",
-        "healthansgnd",
-        "rchlthalwlst",
-        "dlreldeav2",
-        "dv3sugg",
     ]
     balanced = [
         "nlu_direct_response_filter",
@@ -99,10 +103,11 @@ class ConversationStyle(Enum):
         "enablemm",
         "galileo",
         "serploc",
-        "enbcdxpgpsr2",
-        "healthansgnd",
-        "rchlthalwlst",
         "dlreldeav2",
+        "enbfpr",
+        "jb095",
+        "jbfv1",
+        "nojbfedge",
         "dv3sugg",
     ]
     precise = [
@@ -112,14 +117,15 @@ class ConversationStyle(Enum):
         "responsible_ai_policy_235",
         "enablemm",
         "h3precise",
-        "serploc",
-        "enbcdxpgpsr2",
-        "healthansgnd",
-        "rchlthalwlst",
-        "dlreldeav2",
-        "dv3sugg",
         "clgalileo",
         "h3bsprecise",
+        "serploc",
+        "dlreldeav2",
+        "enbfpr",
+        "jb095",
+        "jbfv1",
+        "nojbfedge",
+        "dv3sugg",
     ]
 
 
@@ -191,32 +197,53 @@ class ChatHubRequest:
                     "sliceIds": [
                         "winmuid3tf",
                         "contctxp2tf",
-                        "bcsrcf",
-                        "ssoverlap50",
-                        "sspltop5",
+                        "ssoverlap0",
                         "sswebtop1",
+                        "clarityconvcf",
                         "ttstmout",
-                        "nopreloadsstf",
                         "rrsupp16",
                         "winlongmsg2tf",
                         "wpcssopt",
                         "creatgoglt2",
                         "creatorv2t",
+                        "328cf",
                         "0415bficons0",
                         "418bs",
                         "420langdsats0",
                         "321sloc",
-                        "407pgparser",
                         "0329resps0",
-                        "418rchlth",
+                        "4252tfinance",
                         "asfixescf",
                         "udscahrfon",
+                        "0417rediss0",
                         "420deav2",
+                        "425bfpr",
+                        "424jbfv1",
                     ],
                     "verbosity": "verbose",
                     "traceId": get_rand_hex(32),
                     "isStartOfSession": self.invocation_id == 0,
                     "message": {
+                        "locale": "zh-CN",
+                        "market": "zh-CN",
+                        "region": "AU",
+                        "location": "lat:47.639557;long:-122.128159;re=1000m;",
+                        "locationHints": [{
+                            "country": "Australia",
+                            "state": "Victoria",
+                            "city": "Research",
+                            "zipcode": "3095",
+                            "timezoneoffset": 10,
+                            "countryConfidence": 8,
+                            "cityConfidence": 5,
+                            "Center": {
+                                "Latitude": -37.7114,
+                                "Longitude": 145.1663
+                            },
+                            "RegionType": 2,
+                            "SourceType": 1
+                        }],
+                        "timestamp": (datetime.now() - timedelta(hours=4)).strftime('%Y-%m-%dT%H:%M:%S+08:00'),
                         "author": "user",
                         "inputMethod": "Keyboard",
                         "text": prompt,
@@ -344,7 +371,7 @@ class ChatHub:
                     yield False, resp_txt
                 elif response.get("type") == 2:
                     final = True
-                    print(response)
+                    logger.info('[Response]: %s', response)
                     yield True, response
 
     async def __initial_handshake(self):

@@ -3,7 +3,8 @@ const app = getApp()
 import {
   doRequest,
   sidPrefix,
-  systemInfo
+  systemInfo,
+  cacheChatNum
 } from "../../config"
 
 var closeShareOnCopy = false
@@ -28,15 +29,15 @@ Component({
     mode: {
       type: String,
       value: "normal"
-		},
-		showPrevBt: {
-			type: Boolean,
-			value: false
-		}
+    },
+    showPrevBt: {
+      type: Boolean,
+      value: false
+    }
   },
   pageLifetimes: {
     show: function () {
-      //this.initMessageHistory()
+      this.initMessageHistory()
       if (this.data.mode != "normal") {
         this.setData({
           height: systemInfo.windowHeight - 15,
@@ -46,7 +47,7 @@ Component({
   },
   lifetimes: {
     attached() {
-      this.initMessageHistory()
+      //this.initMessageHistory()
     },
     detached() {
       try {} catch (error) {}
@@ -100,7 +101,7 @@ Component({
             }
           } else {
             data.forEach(k => {
-							var exist = false
+              var exist = false
               for (var i = 0; i < oldData.length; i++) {
                 if (k && k["dt"] == oldData[i]["dt"] && k["originContent"] == oldData[i]["originContent"]) {
                   exist = true
@@ -117,10 +118,10 @@ Component({
             chatList: newData,
             loadingData: false
           }, () => {
-            if (oldData.length < 10 && that.data.mode == "normal") {
+            if (oldData.length < cacheChatNum && that.data.mode == "normal") {
               wx.setStorage({
                 key: "chatList",
-                data: newData.slice(-10),
+                data: newData.slice(-cacheChatNum),
               })
             }
             if (filterData.length == 0 && e) {
@@ -187,7 +188,7 @@ Component({
                 })
                 wx.setStorage({
                   key: "chatList",
-                  data: data.slice(data.length - 10),
+                  data: data.slice(data.length - cacheChatNum),
                 })
               })
             })
@@ -320,7 +321,7 @@ Component({
           if (that.data.mode == "normal") {
             wx.setStorage({
               key: "chatList",
-              data: that.data.chatList.slice(that.data.chatList.length - 10),
+              data: that.data.chatList.slice(that.data.chatList.length - cacheChatNum),
             })
           } else {
             wx.getStorage({

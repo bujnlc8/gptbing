@@ -10,14 +10,12 @@ from datetime import datetime, timedelta
 import openai
 import requests
 from sanic import Sanic
-
-from sanic.log import logger
 from sanic.response import json
 
 from BingImageCreator import async_image_gen
-
 from conversation_ctr import conversation_ctr
 from EdgeGPT import Chatbot, ConversationStyle
+from logger import logger
 
 APPID = os.environ.get('WXAPPID')
 APPSECRET = os.environ.get('WXAPPSECRET')
@@ -62,6 +60,8 @@ HIDDEN_TEXTS = [
 
 
 def check_hidden(text):
+    if not text:
+        return False
     for x in HIDDEN_TEXTS:
         if x in text:
             return True
@@ -127,9 +127,9 @@ def make_response_data(status, text, suggests, message, num_in_conversation=-1):
 async def generate_image(q):
     resp = []
     if q and q.startswith('图片#') and q[3:].strip():
-        imgaes = await async_image_gen(q[3:].strip())
+        images = await async_image_gen(q[3:].strip())
         resp = ['生成的图片如下：']
-        for i, link in enumerate(imgaes):
+        for i, link in enumerate(images):
             resp.append(f'![image {i + 1}]({link})')
     return '\n'.join(resp)
 
@@ -169,7 +169,7 @@ async def ws_chat(_, ws):
                         'data': processed_data
                     }))
                 else:
-                    if not check_hidden(res):
+                    if res and not check_hidden(res):
                         last_not_final_text = res
                         await ws.send(raw_json.dumps({
                             'final': final,

@@ -2,7 +2,8 @@ import {
   doRequest,
   SERVER_WSS_HOST,
   systemInfo,
-  sidPrefix
+  sidPrefix,
+  cacheChatNum
 } from "../../config"
 
 const initHeight = inputPop() ? 15 : 2
@@ -144,29 +145,6 @@ Page({
     })
   },
   onShow() {
-    var options = this.getOptions()
-    if (options && options["q"]) {
-      var q = decodeURIComponent(options["q"])
-      var chatType = this.data.chatType
-      var chatStyle = this.data.chatStyle
-      if (options["chatType"]) {
-        chatType = options["chatType"]
-        // 聊天方式不同，关闭websocket
-        if (chatType != this.data.chatType) {
-          this.onCancelReceive()
-        }
-      }
-      if (options["chatStyle"]) {
-        chatStyle = options["chatStyle"]
-      }
-      this.setData({
-        searchPopMessage: "即将搜索“" + q + "”",
-        showSearchPop: true,
-        q: q,
-        chatType: chatType,
-        chatStyle: chatStyle,
-      })
-    }
     // 切换title
     this.switchTitle()
   },
@@ -198,6 +176,31 @@ Page({
         })
       }
     }, 300)
+    var options = this.getOptions()
+    if (options && options["q"]) {
+      var q = decodeURIComponent(options["q"])
+      var chatType = this.data.chatType
+      var chatStyle = this.data.chatStyle
+      if (options["chatType"]) {
+        chatType = options["chatType"]
+        // 聊天方式不同，关闭websocket
+        if (chatType != this.data.chatType) {
+          this.onCancelReceive()
+        }
+      }
+      if (options["chatStyle"]) {
+        chatStyle = options["chatStyle"]
+      }
+      this.setData({
+        searchPopMessage: "即将搜索“" + q + "”",
+        showSearchPop: true,
+        q: q,
+        chatType: chatType,
+        chatStyle: chatStyle,
+      })
+    } else {
+      options["q"] = null
+    }
   },
   processData: function (data, suggests, content) {
     var robContent = data["data"]["status"]
@@ -334,10 +337,10 @@ Page({
         searching: false
       })
     }
-    // 只保留最新的10条
+    // 只保留最新的cacheChatNum条
     wx.setStorage({
       key: "chatList",
-      data: cht.data.chatList.slice(cht.data.chatList.length - 10),
+      data: cht.data.chatList.slice(cht.data.chatList.length - cacheChatNum),
     })
     if (final) {
       app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 3))
@@ -619,7 +622,7 @@ Page({
       itemList: itemList,
       success(res) {
         if (res.tapIndex == 0) {
-          wx.redirectTo({
+          wx.navigateTo({
             url: "/pages/collected/collected",
           })
         } else if (res.tapIndex == 1) {
