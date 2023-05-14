@@ -22,7 +22,7 @@
 		<view class="chat-item right" wx:if="{{item.type == 'man' }}" id="msg-{{index}}">
 			<view class="chat-box" style="margin-right: 12px;">
 				<text class="dt" style="display: block;text-align: right">{{item.dt}}</text>
-				<view class="content bg-green" catchlongpress="copyContent" data-index="{{index}}"><mp-html content="{{item.originContent}}" preview-img selectable="{{true}}" markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}" use-anchor="{{true}}" scroll-table="{{true}}" container-style="margin-top: -1em;"/></view>
+				<view class="content bg-green" catchlongpress="copyContent" data-index="{{index}}"><text user-select="{{true}}">{{item.originContent}}</text></view>
 			</view>
 			<image class="avatar" src="{{item.avatarUrl}}" catchlongpress="clearChat" data-index="{{index}}"></image>
 		</view>

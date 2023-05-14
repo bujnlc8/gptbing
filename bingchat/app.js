@@ -12,7 +12,7 @@ App({
     this.upload_conversation()
   },
   onHide: function () {
-    this.upload_conversation()
+    // this.upload_conversation()
   },
   globalData: {},
   upload_cache_conversation: function (sid) {

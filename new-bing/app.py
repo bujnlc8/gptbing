@@ -138,7 +138,10 @@ async def generate_image(q):
 async def ws_chat(_, ws):
     while True:
         try:
-            data = raw_json.loads(await ws.recv())
+            data = await ws.recv()
+            if not data:
+                continue
+            data = raw_json.loads(data)
             logger.info('[bing] Websocket receive data: %s', data)
             sid = data['sid']
             q = data['q']
@@ -151,7 +154,10 @@ async def ws_chat(_, ws):
                     'data': make_response_data('Success', resp, [], '')
                 }))
                 continue
-            async for response in get_bot(sid).ask_stream(q, conversation_style=ConversationStyle[style]):
+            async for response in get_bot(sid).ask_stream(
+                    q,
+                    conversation_style=ConversationStyle[style],
+            ):
                 final, res = response
                 if final:
                     processed_data = await process_data(res, q, sid, auto_reset=1)
@@ -275,7 +281,10 @@ def get_temperature(style):
 async def ws_openai_chat(_, ws):
     while True:
         try:
-            data = raw_json.loads(await ws.recv())
+            data = await ws.recv()
+            if not data:
+                continue
+            data = raw_json.loads(data)
             logger.info('[openai] Websocket receive data: %s', data)
             sid = data['sid']
             if not show_chatgpt(sid):
