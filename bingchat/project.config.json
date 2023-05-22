@@ -17,7 +17,8 @@
 			"disablePlugins": [],
 			"outputPath": ""
 		},
-		"uglifyFileName": false
+		"uglifyFileName": false,
+		"condition": false
 	},
 	"condition": {},
 	"editorSetting": {

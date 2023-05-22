@@ -7,3 +7,4 @@ openai==0.27.6
 redis==4.5.4
 hiredis==2.2.2
 regex==2023.3.23
+tiktoken==0.4.0

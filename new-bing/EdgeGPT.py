@@ -10,11 +10,9 @@ import random
 import ssl
 import sys
 import uuid
+from datetime import datetime
 from enum import Enum
-from typing import Generator
-from typing import Literal
-from typing import Optional
-from typing import Union
+from typing import Generator, Literal, Optional, Union
 
 import certifi
 import httpx
@@ -90,17 +88,10 @@ class ConversationStyle(Enum):
         "responsible_ai_policy_235",
         "enablemm",
         "h3imaginative",
-        "cachewriteext",
-        "e2ecachewrite",
-        "nodlcpcwrite",
-        "nointernalsugg",
-        "sportsansgnd",
-        "enablenewsfc",
-        "eiatrvlansgnd",
         "dv3sugg",
+        "autosave",
         "clgalileo",
         "gencontentv3",
-        "h3precigencon",
     ]
     balanced = [
         "nlu_direct_response_filter",
@@ -109,15 +100,8 @@ class ConversationStyle(Enum):
         "responsible_ai_policy_235",
         "enablemm",
         "galileo",
-        "cachewriteext",
-        "e2ecachewrite",
-        "nodlcpcwrite",
-        "nointernalsugg",
-        "sportsansgnd",
-        "enablenewsfc",
-        "eiatrvlansgnd",
         "dv3sugg",
-        "saharasugg",
+        "autosave",
     ]
     precise = [
         "nlu_direct_response_filter",
@@ -126,17 +110,10 @@ class ConversationStyle(Enum):
         "responsible_ai_policy_235",
         "enablemm",
         "h3precise",
-        "cachewriteext",
-        "e2ecachewrite",
-        "nodlcpcwrite",
-        "nointernalsugg",
-        "sportsansgnd",
-        "enablenewsfc",
-        "eiatrvlansgnd",
         "dv3sugg",
+        "autosave",
         "clgalileo",
         "gencontentv3",
-        "h3precigencon",
     ]
 
 
@@ -206,34 +183,36 @@ class _ChatHubRequest:
                     "optionsSets": options,
                     "allowedMessageTypes": [
                         "Chat",
-                        "Disengaged",
                         "SemanticSerp",
                         "GenerateContentQuery",
                         "SearchQuery",
+                        "Disengaged",
                     ],
-                    "sliceIds": [
-                        "winmuid1tf",
-                        "sydconfigoptc",
-                        "ssoverlap0",
-                        "sswebtop1",
-                        "forallv2pwc",
-                        "adssqovr",
-                        "winlongmsgtf",
-                        "ctrlworkpay",
-                        "505iccrics0",
-                        "505suggmux",
-                        "scprompt2",
-                        "508jbcar",
-                        "430rai267s0",
-                        "507vaop",
-                        "406sportgnd",
-                        "427startpm",
-                        "427vserptf1",
-                        "512biccp1",
-                    ],
+                    "sliceIds": [],
                     "traceId": _get_ran_hex(32),
                     "isStartOfSession": self.invocation_id == 0,
                     "message": {
+                        "locale": "zh-CN",
+                        "market": "zh-CN",
+                        "region": "US",
+                        "location": "lat:47.639557;long:-122.128159;re=1000m;",
+                        "locationHints": [{
+                            "country": "United States",
+                            "state": "California",
+                            "city": "Los Angeles",
+                            "zipcode": "90014",
+                            "timezoneoffset": -8,
+                            "dma": 803,
+                            "countryConfidence": 8,
+                            "cityConfidence": 5,
+                            "Center": {
+                                "Latitude": 34.0448,
+                                "Longitude": -118.2527
+                            },
+                            "RegionType": 2,
+                            "SourceType": 1
+                        }],
+                        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+08:00"),
                         "author": "user",
                         "inputMethod": "Keyboard",
                         "text": prompt,
@@ -370,8 +349,8 @@ class _Conversation:
             if response.status_code != 200:
                 response = await client.get("https://edge.churchless.tech/edgesvc/turing/conversation/create", )
         if response.status_code != 200:
-            logger.error('[create], code: %s, response: %s', response.status_code, response.text)
             try:
+                logger.error('[create], code: %s, response: %s', response.status_code, response.text)
                 resp = response.json()
                 raise NotAllowedToAccess(resp['result']['message'])
             except NotAllowedToAccess as e:
@@ -424,6 +403,7 @@ class _ChatHub:
             extra_headers=HEADERS,
             max_size=None,
             ssl=ssl_context,
+            ping_interval=None,
         )
         await self._initial_handshake()
         if self.request.invocation_id == 0:
@@ -459,12 +439,12 @@ class _ChatHub:
                 )
                 if response.status_code != 200:
                     logger.error(
-                        '[update], code: %s, url: %s, response: %s',
+                        '[update], code: %s, url: %s, response:\n %s',
                         response.status_code,
                         response.url,
                         response.text,
                     )
-                    raise Exception("Update web page context failed")
+                    raise Exception("Update web page context failed，请稍后再试吧！")
                 # Construct a ChatHub request
                 self.request.update(
                     prompt=prompt,
@@ -509,17 +489,20 @@ class _ChatHub:
                         yield False, resp_txt
 
                 elif response.get("type") == 2:
-                    if draw:
-                        response["item"]["messages"][1]["adaptiveCards"][0]["body"][0]["text"] = resp_txt
-                    if (response["item"]["messages"][-1]["contentOrigin"] == "Apology" and resp_txt):
-                        response["item"]["messages"][-1]["text"] = resp_txt_no_link
-                        response["item"]["messages"][-1]["adaptiveCards"][0]["body"][0]["text"] = resp_txt
-                        print(
-                            "Preserved the message from being deleted",
-                            file=sys.stderr,
-                        )
+                    try:
+                        logger.info('[Response] %s', response)
+                        if draw:
+                            response["item"]["messages"][1]["adaptiveCards"][0]["body"][0]["text"] = resp_txt
+                        if (response["item"]["messages"][-1]["contentOrigin"] == "Apology" and resp_txt):
+                            response["item"]["messages"][-1]["text"] = resp_txt_no_link
+                            response["item"]["messages"][-1]["adaptiveCards"][0]["body"][0]["text"] = resp_txt
+                            print(
+                                "Preserved the message from being deleted",
+                                file=sys.stderr,
+                            )
+                    except KeyError:
+                        pass
                     final = True
-                    logger.info('[Response] %s', response)
                     yield True, response
 
     async def _initial_handshake(self) -> None:
@@ -580,8 +563,6 @@ class Chatbot:
         ):
             if final:
                 return response
-        await self.chat_hub.wss.close()
-        return {}
 
     async def ask_stream(
         self,

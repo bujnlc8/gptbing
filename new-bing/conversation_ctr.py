@@ -17,6 +17,7 @@ class ConversationCtr:
     CONVERSATION_LIST_KEY = 'bing:conversation_list:%s'
     OPENAI_WHITE_LIST_KEY = 'bing:openai_white_list'
     COLLECT_LIST_KEY = 'bing:collected_list:%s'
+    BLACK_LIST = 'bing:black_list'
 
     def __init__(self, client=None) -> None:
         self.redis_client = client
@@ -76,6 +77,9 @@ class ConversationCtr:
 
     def get_openai_whitelist(self):
         return self.redis_client.lrange(self.OPENAI_WHITE_LIST_KEY, 0, 10000)
+
+    def get_blacklist(self):
+        return self.redis_client.lrange(self.BLACK_LIST, 0, 10000)
 
     def operate_collect(self, sid, conversation, operate_type=1):
         conversation = self.normalize_data(conversation)

@@ -68,7 +68,7 @@ class ImageGenAsync:
                 ) as response3:
                     if response3.status != 302:
                         logger.error('url: %s, status: %s, response: %s', url, response3.status, response3.text)
-                        raise Exception("服务当前不可用， 请稍后再试。")
+                        raise Exception("画图服务不可用，请稍后再试！")
                     response = response3
         # Get redirect URL
         redirect_url = response.headers["Location"].replace("&nfy=1", "")
