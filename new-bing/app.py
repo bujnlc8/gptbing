@@ -199,8 +199,8 @@ async def ws_chat(_, ws):
             style = data.get('style', 'creative')
             if check_blocked(sid):
                 raise Exception('无权限使用此服务！')
-            # 发生错误，重试2次
-            try_times = 2
+            # 发生错误，重试4次
+            try_times = 4
             await ask_bing(ws, sid, q, style)
         except KeyError:
             msg = 'New Bing服务异常，请稍后再试！'
