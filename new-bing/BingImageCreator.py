@@ -109,10 +109,10 @@ class ImageGenAsync:
         return normal_image_links
 
 
-async def async_image_gen(prompt, cookie=""):
-    if not cookie:
-        f = open(os.environ.get("COOKIE_FILE"), encoding="utf-8").read()
-        cookie_file = json.loads(f)
+async def async_image_gen(prompt, cookie_path=''):
+    cookie = ""
+    with open(cookie_path, "r", encoding="utf-8") as f:
+        cookie_file = json.load(f)
         for x in cookie_file:
             if x["name"] == "_U":
                 cookie = x["value"]

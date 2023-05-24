@@ -128,10 +128,10 @@ def make_response_data(status, text, suggests, message, num_in_conversation=-1, 
     return data
 
 
-async def generate_image(q):
+async def generate_image(q, sid):
     resp = []
     if q and q.startswith('图片#') and q[3:].strip():
-        images = await async_image_gen(q[3:].strip())
+        images = await async_image_gen(q[3:].strip(), cookie_path=get_cookie_file(sid, COOKIE_FILES))
         resp = ['生成的图片如下：']
         for i, link in enumerate(images):
             resp.append(f'![image {i + 1}]({link})')
@@ -140,7 +140,7 @@ async def generate_image(q):
 
 async def ask_bing(ws, sid, q, style):
     last_not_final_text = ''
-    resp = await generate_image(q)
+    resp = await generate_image(q, sid)
     if resp:
         await ws.send(raw_json.dumps({
             'final': True,
@@ -254,6 +254,13 @@ async def process_data(res, q, sid, auto_reset=None):
     status = res['item']['result']['value']
     if status == 'Success':
         item = res['item']['messages']
+        try:
+            user_message = item[0]
+            offense = user_message['offense']
+            if offense and (offense != 'Unknown' and offense != 'None'):
+                send_mail('Offense!! ' + offense + ' ' + sid, str(res))
+        except:
+            pass
         if len(item) >= 2:
             index = 1
             # 多于2个adaptiveCards
@@ -302,12 +309,12 @@ async def chat(request):
     if check_blocked(request.json.get('sid')) or 'servicewechat.com/wxee7496be5b68b740' not in request.headers.get(
             'referer', ''):
         raise Exception('无权限使用此服务')
-    resp = await generate_image(q)
+    sid = request.json.get('sid')
+    resp = await generate_image(q, sid)
     if resp:
         return json(make_response_data('Success', resp, [], ''))
     res = await do_chat(request)
     auto_reset = request.json.get('auto_reset', '')
-    sid = request.json.get('sid')
     data = await process_data(res, request.json.get('q'), sid, auto_reset)
     if data['data']['status'] == 'Throttled':
         await reset_conversation(sid, cookie_path=reset_cookie(sid))
@@ -385,7 +392,7 @@ async def ws_openai_chat(_, ws):
             if not show_chatgpt(sid):
                 raise Exception('无权限使用此服务')
             q = data['q']
-            resp = await generate_image(q)
+            resp = await generate_image(q, sid)
             if resp:
                 await ws.send(raw_json.dumps({
                     'final': True,
@@ -452,7 +459,7 @@ async def openai_chat(request):
         if not show_chatgpt(sid):
             raise Exception('无权限使用此服务')
         q = request.json.get('q')
-        resp = await generate_image(q)
+        resp = await generate_image(q, sid)
         if resp:
             return json(make_response_data('Success', resp, [], ''))
         style = request.json.get('style', 'balanced')

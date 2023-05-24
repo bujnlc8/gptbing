@@ -392,6 +392,7 @@ class _ChatHub:
         options: dict = None,
         webpage_context: str | None = None,
         search_result: bool = False,
+        cookie_path: str = '',
     ) -> Generator[str, None, None]:
         """
         Ask a question to the bot
@@ -470,7 +471,10 @@ class _ChatHub:
                 elif response.get("type") == 1 and response["arguments"][0].get("messages", ):
                     if not draw:
                         if (response["arguments"][0]["messages"][0].get("messageType") == "GenerateContentQuery"):
-                            images = await async_image_gen(response["arguments"][0]["messages"][0]["text"])
+                            images = await async_image_gen(
+                                response["arguments"][0]["messages"][0]["text"],
+                                cookie_path=cookie_path,
+                            )
                             for i, image in enumerate(images):
                                 resp_txt = resp_txt + f"\n![image{i}]({image})"
                             draw = True
@@ -563,6 +567,7 @@ class Chatbot:
                 options=options,
                 webpage_context=webpage_context,
                 search_result=search_result,
+                cookie_path=self.cookie_path,
         ):
             if final:
                 return response
@@ -588,6 +593,7 @@ class Chatbot:
                 options=options,
                 webpage_context=webpage_context,
                 search_result=search_result,
+                cookie_path=self.cookie_path,
         ):
             yield response
 
