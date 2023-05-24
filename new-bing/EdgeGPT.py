@@ -191,6 +191,7 @@ class _ChatHubRequest:
                     "sliceIds": [],
                     "traceId": _get_ran_hex(32),
                     "isStartOfSession": self.invocation_id == 0,
+                    "tone": conversation_style.name.capitalize(),
                     "message": {
                         "locale": "zh-CN",
                         "market": "zh-CN",
@@ -528,7 +529,9 @@ class Chatbot:
     def __init__(
         self,
         proxy: str | None = None,
+        cookie_path: str = '',
     ) -> None:
+        self.cookie_path = cookie_path
         self.load_cookie()
         self.proxy: str | None = proxy
         self.chat_hub: _ChatHub = _ChatHub(_Conversation(self.cookies, self.proxy), )
@@ -604,7 +607,7 @@ class Chatbot:
 
     def load_cookie(self):
         try:
-            with open(os.environ.get("COOKIE_FILE"), encoding="utf-8") as f:
+            with open(self.cookie_path) as f:
                 self.cookies = json.load(f)
         except FileNotFoundError as exc:
             raise FileNotFoundError("Cookie file not found") from exc

@@ -3,7 +3,6 @@
 import json as raw_json
 import os
 import re
-import threading
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -22,24 +21,15 @@ APPID = os.environ.get('WXAPPID')
 APPSECRET = os.environ.get('WXAPPSECRET')
 WX_URL = 'https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code'
 
-# cookie列表, 如果有此环境变量，优先使用
+# cookie列表
 COOKIE_FILES = raw_json.loads(os.environ.get('COOKIE_FILES', '[]'))
-if COOKIE_FILES:
-    os.environ['COOKIE_FILE'] = COOKIE_FILES[0]
-else:
-    COOKIE = os.environ.get('COOKIE_FILE', '')
-    if not COOKIE:
-        raise ValueError('COOKIE_FILE环境变量为空')
-    BAK_COOKIE = os.environ.get('COOKIE_FILE1', COOKIE)
-    BAK_COOKIE1 = os.environ.get('COOKIE_FILE2', COOKIE)
-    BAK_COOKIE2 = os.environ.get('COOKIE_FILE3', COOKIE)
-
-LOCK = threading.Lock()
+if not COOKIE_FILES:
+    raise ValueError('COOKIE_FILES环境变量为空')
 
 app = Sanic('new-bing')
 app.config.REQUEST_TIMEOUT = 900
 app.config.RESPONSE_TIMEOUT = 900
-app.config.WEBSOCKET_PING_INTERVAL = 15
+app.config.WEBSOCKET_PING_INTERVAL = 10
 app.config.WEBSOCKET_PING_TIMEOUT = 30
 
 bots = {}
@@ -69,12 +59,26 @@ def check_hidden(text):
     return False
 
 
-def get_bot(sid):
+def get_cookie_file(sid, cookie_files):
+    # 优先获取最后一个
+    if show_chatgpt(sid):
+        return cookie_files[-1]
+    # 根据sid相加取余算出一个数
+    total_cookie_num = len(cookie_files) - 1
+    return cookie_files[sum([ord(x) for x in sid.replace('_', '').replace('-', '')[10:]]) % total_cookie_num]
+
+
+def get_bot(sid, cookie_path=None):
     if sid in bots:
         record = bots[sid]
         if record['expired'] > datetime.now():
-            return record['bot']
-    bot = Chatbot()
+            bot = record['bot']
+            if cookie_path:
+                bot.cookie_path = cookie_path
+            return bot
+    cookie_path = cookie_path or get_cookie_file(sid, COOKIE_FILES)
+    logger.info('[Bot Cookie] sid: %s, cookie_path: %s', sid, cookie_path)
+    bot = Chatbot(cookie_path=cookie_path)
     bots[sid] = {
         'bot': bot,
         'expired': datetime.now() + timedelta(hours=5, minutes=55),  # 会话有效期为6小时
@@ -82,8 +86,17 @@ def get_bot(sid):
     return bot
 
 
-async def reset_conversation(sid):
-    await get_bot(sid).reset()
+def reset_cookie(sid):
+    cookie_files = COOKIE_FILES
+    total_cookie_num = len(cookie_files) - 1
+    return cookie_files[(
+        sum([ord(x)
+             for x in sid.replace('_', '').replace('-', '')[10:]]) + conversation_ctr.get_switch_cookie_step(sid)
+    ) % total_cookie_num]
+
+
+async def reset_conversation(sid, cookie_path=None):
+    await get_bot(sid, cookie_path=cookie_path).reset()
     bots[sid]['expired'] = datetime.now() + timedelta(hours=5, minutes=55)
 
 
@@ -100,24 +113,6 @@ def check_blocked(sid):
             return True
 
 
-def reset_cookie():
-    if not LOCK.acquire(blocking=False):
-        return
-    cookie = os.environ.get('COOKIE_FILE')
-    if COOKIE_FILES:
-        os.environ['COOKIE_FILE'] = COOKIE_FILES[(COOKIE_FILES.index(cookie) + 1) % len(COOKIE_FILES)]
-    else:
-        if cookie == COOKIE:
-            os.environ['COOKIE_FILE'] = BAK_COOKIE
-        elif cookie == BAK_COOKIE:
-            os.environ['COOKIE_FILE'] = BAK_COOKIE1
-        elif cookie == BAK_COOKIE1:
-            os.environ['COOKIE_FILE'] = BAK_COOKIE2
-        elif cookie == BAK_COOKIE2:
-            os.environ['COOKIE_FILE'] = COOKIE
-    LOCK.release()
-
-
 def make_response_data(status, text, suggests, message, num_in_conversation=-1, final=True):
     data = {
         'data': {
@@ -127,7 +122,6 @@ def make_response_data(status, text, suggests, message, num_in_conversation=-1, 
             'message': message,
             'num_in_conversation': num_in_conversation,
         },
-        'cookie': os.environ.get('COOKIE_FILE'),
     }
     if final:
         logger.info(data)
@@ -161,11 +155,15 @@ async def ask_bing(ws, sid, q, style):
         if final:
             processed_data = await process_data(res, q, sid, auto_reset=1)
             if processed_data['data']['status'] == 'Throttled':
-                reset_cookie()
-                await reset_conversation(sid)
+                await reset_conversation(sid, cookie_path=reset_cookie(sid))
                 processed_data['data']['suggests'].append(q)
             if processed_data['data']['status'] == 'InternalError':
-                raise Exception('系统内部异常，请稍后再试！')
+                if last_not_final_text:
+                    processed_data = make_response_data(
+                        'Success', last_not_final_text, [], '', processed_data['data']['num_in_conversation']
+                    )
+                else:
+                    raise Exception('系统内部异常，请稍后再试！')
             # 取消New Bing隐藏敏感内容
             if last_not_final_text and check_hidden(processed_data['data']['text']):
                 processed_data = make_response_data(
@@ -208,6 +206,9 @@ async def ws_chat(_, ws):
             logger.error(e)
             msg = str(e) or 'New Bing服务异常，请稍后再试！'
         if msg:
+            # websocket 关闭就不再尝试了
+            if 'Cannot write to websocket interface after it is closed' in msg:
+                try_times = 0
             while try_times and msg:
                 try:
                     try_times -= 1
@@ -216,12 +217,15 @@ async def ws_chat(_, ws):
                     if '无权限使用此服务' in msg:
                         break
                     msg = ''
-                    await ask_bing(ws, sid, '刚刚发生了点错误，请再耐心回答一下这个问题。' + q, style)
+                    await ask_bing(ws, sid, '刚刚发生了点错误，请再耐心回答下面的问题：\n' + q, style)
                 except KeyError:
                     msg = 'New Bing服务异常，请稍后再试！'
                 except Exception as e:
                     logger.error(e)
                     msg = str(e) or 'New Bing服务异常，请稍后再试！'
+                # websocket 关闭就不再尝试了
+                if 'Cannot write to websocket interface after it is closed' in msg:
+                    try_times = 0
             if msg:
                 if 'Update web page context failed' in msg:
                     await reset_conversation(sid)
@@ -306,8 +310,7 @@ async def chat(request):
     sid = request.json.get('sid')
     data = await process_data(res, request.json.get('q'), sid, auto_reset)
     if data['data']['status'] == 'Throttled':
-        reset_cookie()
-        await reset_conversation(sid)
+        await reset_conversation(sid, cookie_path=reset_cookie(sid))
         res = await do_chat(request)
         data = await process_data(res, request.json.get('q'), sid, auto_reset)
     return json(data)
