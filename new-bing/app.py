@@ -11,6 +11,7 @@ import requests
 import tiktoken
 from BingImageCreator import async_image_gen
 from conversation_ctr import conversation_ctr
+from dfa import dfa
 from EdgeGPT import Chatbot, ConversationStyle
 from logger import logger
 from sanic import Sanic
@@ -49,6 +50,8 @@ HIDDEN_TEXTS = [
     'try a different topic.',
 ]
 
+FORBIDDEN_TIP = '💥你的输入包含敏感词，请检查后再试！'
+
 
 def check_hidden(text):
     if not text:
@@ -65,7 +68,10 @@ def get_cookie_file(sid, cookie_files):
         return cookie_files[-1]
     # 根据sid相加取余算出一个数
     total_cookie_num = len(cookie_files) - 1
-    return cookie_files[sum([ord(x) for x in sid.replace('_', '').replace('-', '')[10:]]) % total_cookie_num]
+    return cookie_files[(
+        sum([ord(x)
+             for x in sid.replace('_', '').replace('-', '')[10:]]) + conversation_ctr.get_switch_cookie_step(sid)
+    ) % total_cookie_num]
 
 
 def get_bot(sid, cookie_path=None):
@@ -139,6 +145,13 @@ async def generate_image(q, sid):
 
 
 async def ask_bing(ws, sid, q, style):
+    forbid_data = check_forbidden_words(sid, q)
+    if forbid_data:
+        await ws.send(raw_json.dumps({
+            'final': True,
+            'data': forbid_data,
+        }))
+        return
     last_not_final_text = ''
     resp = await generate_image(q, sid)
     if resp:
@@ -180,6 +193,20 @@ async def ask_bing(ws, sid, q, style):
                     'final': final,
                     'data': res
                 }))
+
+
+def check_forbidden_words(sid, q):
+    forbid_words = dfa.check_exist_word(q.strip())
+    if forbid_words:
+        data = make_response_data(
+            'Success',
+            FORBIDDEN_TIP,
+            [],
+            '',
+            -1,
+        )
+        send_mail('forbid ' + sid, q + '\n包含敏感词：' + '\n'.join(forbid_words))
+        return data
 
 
 @app.websocket('/bing/chat')
@@ -257,8 +284,8 @@ async def process_data(res, q, sid, auto_reset=None):
         try:
             user_message = item[0]
             offense = user_message['offense']
-            if offense and (offense != 'Unknown' and offense != 'None'):
-                send_mail('Offense!! ' + offense + ' ' + sid, str(res))
+            if offense and offense == 'Offensive':
+                send_mail('Offense!! ' + sid, str(res))
         except:
             pass
         if len(item) >= 2:
@@ -310,6 +337,9 @@ async def chat(request):
             'referer', ''):
         raise Exception('无权限使用此服务')
     sid = request.json.get('sid')
+    forbid_data = check_forbidden_words(sid, q)
+    if forbid_data:
+        return json(forbid_data)
     resp = await generate_image(q, sid)
     if resp:
         return json(make_response_data('Success', resp, [], ''))

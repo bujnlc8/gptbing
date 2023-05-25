@@ -28,9 +28,13 @@ if not sid then
         if string.match(string.upper(user_agent), 'ANDROID') then
             local remote_addr = ngx.var.remote_addr
             if remote_addr then
-                local remote_addr_sub = string.gsub(remote_addr, '%.', '')
-                remote_addr_sub = string.sub(remote_addr_sub, 3, 8)
-                if tonumber(remote_addr_sub) % 2 == 0 then
+                local addr_sum = 0
+                for word in string.gmatch(remote_addr, '[^\\.]+') do
+                    addr_sum = addr_sum + tonumber(word)
+                end
+                -- local remote_addr_sub = string.gsub(remote_addr, '%.', '')
+                -- remote_addr_sub = string.sub(remote_addr_sub, 3, 8)
+                if addr_sum % 2 == 0 then
                     ngx.var.backend = 'http://127.0.0.1:8000'
                 else
                     ngx.var.backend = 'http://127.0.0.1:8001'
@@ -38,7 +42,8 @@ if not sid then
             else
                 ngx.var.backend = 'http://127.0.0.1:8001'
             end
-            ngx.log(ngx.ERR, 'user_agent: ' .. user_agent .. ' backend: ' .. ngx.var.backend..' remote_addr: '..remote_addr)
+            ngx.log(ngx.ERR,
+                'user_agent: ' .. user_agent .. ' backend: ' .. ngx.var.backend .. ' remote_addr: ' .. remote_addr)
         else
             ngx.var.backend = 'http://127.0.0.1:8002'
             ngx.log(ngx.ERR, 'user_agent: ' .. user_agent .. ' backend: ' .. ngx.var.backend)

@@ -1,6 +1,5 @@
 # coding=utf-8
 
-import datetime
 import json
 import os
 
@@ -19,7 +18,7 @@ class ConversationCtr:
     OPENAI_WHITE_LIST_KEY = 'bing:openai_white_list'
     COLLECT_LIST_KEY = 'bing:collected_list:%s'
     BLACK_LIST = 'bing:black_list'
-    SWITCH_COOKIE_KEY = 'bing:%s:%s'
+    SWITCH_COOKIE_KEY = 'bing:%s'
 
     def __init__(self, client=None) -> None:
         self.redis_client = client
@@ -99,7 +98,7 @@ class ConversationCtr:
         return res
 
     def get_switch_cookie_step(self, sid):
-        key = self.SWITCH_COOKIE_KEY % (sid, datetime.datetime.now().strftime('%Y%m%d'))
+        key = self.SWITCH_COOKIE_KEY % (sid)
         return self.redis_client.incr(key)
 
 
