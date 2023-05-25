@@ -144,7 +144,7 @@ async def generate_image(q, sid):
     return '\n'.join(resp)
 
 
-async def ask_bing(ws, sid, q, style):
+async def ask_bing(ws, sid, q, style, reconnect=False):
     forbid_data = check_forbidden_words(sid, q)
     if forbid_data:
         await ws.send(raw_json.dumps({
@@ -163,6 +163,7 @@ async def ask_bing(ws, sid, q, style):
     async for response in get_bot(sid).ask_stream(
             q,
             conversation_style=ConversationStyle[style],
+            reconnect=reconnect,
     ):
         final, res = response
         if final:
@@ -213,6 +214,7 @@ def check_forbidden_words(sid, q):
 async def ws_chat(_, ws):
     while True:
         msg, sid, q, style, try_times = '', '', '', '', 0
+        reconnect = False
         try:
             data = await ws.recv()
             if not data:
@@ -226,16 +228,16 @@ async def ws_chat(_, ws):
                 raise Exception('无权限使用此服务！')
             # 发生错误，重试4次
             try_times = 4
-            await ask_bing(ws, sid, q, style)
+            reconnect = False
+            await ask_bing(ws, sid, q, style, reconnect=reconnect)
         except KeyError:
             msg = 'New Bing服务异常，请稍后再试！'
         except Exception as e:
             logger.error(e)
             msg = str(e) or 'New Bing服务异常，请稍后再试！'
         if msg:
-            # websocket 关闭就不再尝试了
-            if 'Cannot write to websocket interface after it is closed' in msg:
-                try_times = 0
+            if 'Cannot write to closing transport' in msg:
+                reconnect = True
             while try_times and msg:
                 try:
                     try_times -= 1
@@ -244,16 +246,23 @@ async def ws_chat(_, ws):
                     if '无权限使用此服务' in msg:
                         break
                     msg = ''
-                    await ask_bing(ws, sid, '刚刚发生了点错误，请再耐心回答下面的问题：\n' + q, style)
+                    await ask_bing(
+                        ws,
+                        sid,
+                        '刚刚发生了点错误，请再耐心回答下面的问题：\n' + q,
+                        style,
+                        reconnect=reconnect,
+                    )
+                    reconnect = False
                 except KeyError:
                     msg = 'New Bing服务异常，请稍后再试！'
                 except Exception as e:
                     logger.error(e)
                     msg = str(e) or 'New Bing服务异常，请稍后再试！'
-                # websocket 关闭就不再尝试了
-                if 'Cannot write to websocket interface after it is closed' in msg:
-                    try_times = 0
+                if 'Cannot write to closing transport' in msg:
+                    reconnect = True
             if msg:
+                reconnect = False
                 if 'Update web page context failed' in msg:
                     await reset_conversation(sid)
                 await ws.send(raw_json.dumps({
@@ -309,7 +318,7 @@ async def process_data(res, q, sid, auto_reset=None):
             if not text:
                 if 'text' not in item[1]:
                     await reset_conversation(sid)
-                    text = '抱歉，响应异常。已开启新一轮对话。'
+                    text = '抱歉，New Bing已结束对话。现已开启新一轮对话。'
                     logger.error('响应异常：%s', res)
                 else:
                     text = item[1]['text']
@@ -318,7 +327,7 @@ async def process_data(res, q, sid, auto_reset=None):
                         for x in item[index]['suggestedResponses']] if 'suggestedResponses' in item[index] else []
         else:
             await reset_conversation(sid)
-            text = '抱歉，未找到相关结果。已开启新一轮对话。'
+            text = '抱歉，New Bing已结束对话。现已开启新一轮对话。'
             logger.error('响应异常：%s', res)
             suggests = [q]
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''

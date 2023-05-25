@@ -24,33 +24,29 @@ end
 if not sid then
     local user_agent = headers['User-Agent']
     if user_agent then
-        -- Android分两个实例
-        if string.match(string.upper(user_agent), 'ANDROID') then
-            local remote_addr = ngx.var.remote_addr
-            if remote_addr then
-                local addr_sum = 0
-                for word in string.gmatch(remote_addr, '[^\\.]+') do
-                    addr_sum = addr_sum + tonumber(word)
-                end
-                -- local remote_addr_sub = string.gsub(remote_addr, '%.', '')
-                -- remote_addr_sub = string.sub(remote_addr_sub, 3, 8)
-                if addr_sum % 2 == 0 then
-                    ngx.var.backend = 'http://127.0.0.1:8000'
-                else
-                    ngx.var.backend = 'http://127.0.0.1:8001'
-                end
+        -- Android分2个实例
+        local up = string.upper(user_agent)
+        if string.match(up, 'ANDROID') then
+            local sum = 0
+            local l = string.len(user_agent)
+            for i = 1, l, 1 do
+                sum = sum + string.byte(user_agent, i, i)
+            end
+            if sum % 2 == 0 then
+                ngx.var.backend = 'http://127.0.0.1:8000'
             else
                 ngx.var.backend = 'http://127.0.0.1:8001'
             end
-            ngx.log(ngx.ERR,
-                'user_agent: ' .. user_agent .. ' backend: ' .. ngx.var.backend .. ' remote_addr: ' .. remote_addr)
-        else
+        elseif string.match(up, 'IPHONE') then
             ngx.var.backend = 'http://127.0.0.1:8002'
-            ngx.log(ngx.ERR, 'user_agent: ' .. user_agent .. ' backend: ' .. ngx.var.backend)
+        else
+            ngx.var.backend = 'http://127.0.0.1:8003'
         end
-        return
+        ngx.log(ngx.ERR, 'user_agent: ' .. user_agent .. ' backend: ' .. ngx.var.backend)
+    else
+        ngx.var.backend = 'http://127.0.0.1:8000'
     end
 else
-    ngx.var.backend = 'http://127.0.0.1:8003'
+    ngx.var.backend = 'http://127.0.0.1:8004'
     ngx.log(ngx.ERR, 'sid: ' .. sid .. ' backend: ' .. ngx.var.backend)
 end

@@ -3,7 +3,6 @@ Main.py
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import random
@@ -14,62 +13,64 @@ from datetime import datetime
 from enum import Enum
 from typing import Generator, Literal, Optional, Union
 
+import aiohttp
 import certifi
 import httpx
 import websockets.client as websockets
 from BingImageCreator import async_image_gen
 from logger import logger
 
-DELIMITER = "\x1e"
+DELIMITER = '\x1e'
 
 # Generate random IP between range 13.104.0.0/14
-FORWARDED_IP = (f"13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}")
+FORWARDED_IP = (f'13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}')
 
 HEADERS = {
-    "accept": "application/json",
-    "accept-language": "en-US,en;q=0.9",
-    "content-type": "application/json",
-    "sec-ch-ua": '"Microsoft Edge";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
-    "sec-ch-ua-arch": '"x86"',
-    "sec-ch-ua-bitness": '"64"',
-    "sec-ch-ua-full-version": '"111.0.1661.43"',
-    "sec-ch-ua-full-version-list": '"Microsoft Edge";v="111.0.1661.43", "Not(A:Brand";v="8.0.0.0", "Chromium";v="111.0.5563.64"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-model": "",
-    "sec-ch-ua-platform": '"macOS"',
-    "sec-ch-ua-platform-version": '"11.7.3"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "x-ms-client-request-id": str(uuid.uuid4()),
-    "x-ms-useragent": "azsdk-js-api-client-factory/1.0.0-beta.1 core-rest-pipeline/1.10.0 OS/MacIntel",
-    "Referer": "https://www.bing.com/search?q=Bing+AI&showconv=1&FORM=hpcodx",
-    "Referrer-Policy": "origin-when-cross-origin",
-    "x-forwarded-for": FORWARDED_IP,
+    'accept': 'application/json',
+    'accept-language': 'en-US,en;q=0.9',
+    'content-type': 'application/json',
+    'sec-ch-ua': '"Microsoft Edge";v="113", "Chromium";v="113", "Not-A.Brand";v="24"',
+    'sec-ch-ua-arch': '"x86"',
+    'sec-ch-ua-bitness': '"64"',
+    'sec-ch-ua-full-version': '"113.0.1774.50"',
+    'sec-ch-ua-full-version-list': '"Microsoft Edge";v="113.0.1774.50", "Chromium";v="113.0.5672.127", "Not-A.Brand";v="24.0.0.0"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-model': '""',
+    'sec-ch-ua-platform': '"macOS"',
+    'sec-ch-ua-platform-version': '"10.15.7"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'x-ms-client-request-id': str(uuid.uuid4()),
+    'x-ms-useragent': 'azsdk-js-api-client-factory/1.0.0-beta.1 core-rest-pipeline/1.10.0 OS/MacIntel',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.50',
+    'Referer': 'https://www.bing.com/search?q=Bing+AI&showconv=1&FORM=hpcodx',
+    'Referrer-Policy': 'origin-when-cross-origin',
+    'x-forwarded-for': FORWARDED_IP,
 }
 
 HEADERS_INIT_CONVER = {
-    "authority": "edgeservices.bing.com",
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "accept-language": "en-US,en;q=0.9",
-    "cache-control": "max-age=0",
-    "sec-ch-ua": '"Microsoft Edge";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
+    'authority': 'www.bing.com',
+    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'accept-language': 'en-US,en;q=0.9',
+    'cache-control': 'max-age=0',
+    "sec-ch-ua": '"Microsoft Edge";v="113", "Chromium";v="113", "Not-A.Brand";v="24"',
     "sec-ch-ua-arch": '"x86"',
     "sec-ch-ua-bitness": '"64"',
-    "sec-ch-ua-full-version": '"111.0.1661.43"',
-    "sec-ch-ua-full-version-list": '"Microsoft Edge";v="111.0.1661.43", "Not(A:Brand";v="8.0.0.0", "Chromium";v="111.0.5563.64"',
-    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-full-version": '"113.0.1774.50"',
+    "sec-ch-ua-full-version-list": '"Microsoft Edge";v="113.0.1774.50", "Chromium";v="113.0.5672.127", "Not-A.Brand";v="24.0.0.0"',
+    'sec-ch-ua-mobile': '?0',
     "sec-ch-ua-model": '""',
     "sec-ch-ua-platform": '"macOS"',
-    "sec-ch-ua-platform-version": '"11.7.3"',
-    "sec-fetch-dest": "document",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "none",
-    "sec-fetch-user": "?1",
-    "upgrade-insecure-requests": "1",
-    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36 Edg/111.0.1661.43",
-    "x-edge-shopping-flag": "1",
-    "x-forwarded-for": FORWARDED_IP,
+    "sec-ch-ua-platform-version": '"10.15.7"',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'none',
+    'sec-fetch-user': '?1',
+    'upgrade-insecure-requests': '1',
+    'x-edge-shopping-flag': '1',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.50',
+    'x-forwarded-for': FORWARDED_IP,
 }
 
 ssl_context = ssl.create_default_context()
@@ -82,42 +83,42 @@ class NotAllowedToAccess(Exception):
 
 class ConversationStyle(Enum):
     creative = [
-        "nlu_direct_response_filter",
-        "deepleo",
-        "disable_emoji_spoken_text",
-        "responsible_ai_policy_235",
-        "enablemm",
-        "h3imaginative",
-        "dv3sugg",
-        "autosave",
-        "clgalileo",
-        "gencontentv3",
+        'nlu_direct_response_filter',
+        'deepleo',
+        'disable_emoji_spoken_text',
+        'responsible_ai_policy_235',
+        'enablemm',
+        'h3imaginative',
+        'dv3sugg',
+        'autosave',
+        'clgalileo',
+        'gencontentv3',
     ]
     balanced = [
-        "nlu_direct_response_filter",
-        "deepleo",
-        "disable_emoji_spoken_text",
-        "responsible_ai_policy_235",
-        "enablemm",
-        "galileo",
-        "dv3sugg",
-        "autosave",
+        'nlu_direct_response_filter',
+        'deepleo',
+        'disable_emoji_spoken_text',
+        'responsible_ai_policy_235',
+        'enablemm',
+        'galileo',
+        'dv3sugg',
+        'autosave',
     ]
     precise = [
-        "nlu_direct_response_filter",
-        "deepleo",
-        "disable_emoji_spoken_text",
-        "responsible_ai_policy_235",
-        "enablemm",
-        "h3precise",
-        "dv3sugg",
-        "autosave",
-        "clgalileo",
-        "gencontentv3",
+        'nlu_direct_response_filter',
+        'deepleo',
+        'disable_emoji_spoken_text',
+        'responsible_ai_policy_235',
+        'enablemm',
+        'h3precise',
+        'dv3sugg',
+        'autosave',
+        'clgalileo',
+        'gencontentv3',
     ]
 
 
-CONVERSATION_STYLE_TYPE = Optional[Union[ConversationStyle, Literal["creative", "balanced", "precise"]]]
+CONVERSATION_STYLE_TYPE = Optional[Union[ConversationStyle, Literal['creative', 'balanced', 'precise']]]
 
 
 def _append_identifier(msg: dict) -> str:
@@ -132,7 +133,17 @@ def _get_ran_hex(length: int = 32) -> str:
     """
     Returns random hex string
     """
-    return "".join(random.choice("0123456789abcdef") for _ in range(length))
+    return ''.join(random.choice('0123456789abcdef') for _ in range(length))
+
+
+def _get_proxy():
+    proxy = (
+        os.environ.get('all_proxy') or os.environ.get('ALL_PROXY') or os.environ.get('https_proxy')
+        or os.environ.get('HTTPS_PROXY') or None
+    )
+    if proxy is not None and proxy.startswith('socks5h://'):
+        proxy = 'socks5://' + proxy[len('socks5h://'):]
+    return proxy
 
 
 class _ChatHubRequest:
@@ -167,85 +178,86 @@ class _ChatHubRequest:
         """
         if options is None:
             options = [
-                "deepleo",
-                "enable_debug_commands",
-                "disable_emoji_spoken_text",
-                "enablemm",
+                'deepleo',
+                'enable_debug_commands',
+                'disable_emoji_spoken_text',
+                'enablemm',
             ]
         if conversation_style:
             if not isinstance(conversation_style, ConversationStyle):
                 conversation_style = getattr(ConversationStyle, conversation_style)
-            options = conversation_style.value
+            if conversation_style:
+                options = conversation_style.value
         self.struct = {
-            "arguments": [
+            'arguments': [
                 {
-                    "source": "cib",
-                    "optionsSets": options,
-                    "allowedMessageTypes": [
-                        "Chat",
-                        "SemanticSerp",
-                        "GenerateContentQuery",
-                        "SearchQuery",
-                        "Disengaged",
+                    'source': 'cib',
+                    'optionsSets': options,
+                    'allowedMessageTypes': [
+                        'Chat',
+                        'SemanticSerp',
+                        'GenerateContentQuery',
+                        'SearchQuery',
+                        'Disengaged',
                     ],
-                    "sliceIds": [],
-                    "traceId": _get_ran_hex(32),
-                    "isStartOfSession": self.invocation_id == 0,
-                    "tone": conversation_style.name.capitalize(),
-                    "message": {
-                        "locale": "zh-CN",
-                        "market": "zh-CN",
-                        "region": "US",
-                        "location": "lat:47.639557;long:-122.128159;re=1000m;",
-                        "locationHints": [{
-                            "country": "United States",
-                            "state": "California",
-                            "city": "Los Angeles",
-                            "zipcode": "90014",
-                            "timezoneoffset": -8,
-                            "dma": 803,
-                            "countryConfidence": 8,
-                            "cityConfidence": 5,
-                            "Center": {
-                                "Latitude": 34.0448,
-                                "Longitude": -118.2527
+                    'sliceIds': [],
+                    'traceId': _get_ran_hex(32),
+                    'isStartOfSession': self.invocation_id == 0,
+                    'tone': conversation_style.name.capitalize() if conversation_style else '',
+                    'message': {
+                        'locale': 'zh-CN',
+                        'market': 'zh-CN',
+                        'region': 'US',
+                        'location': 'lat:47.639557;long:-122.128159;re=1000m;',
+                        'locationHints': [{
+                            'country': 'United States',
+                            'state': 'California',
+                            'city': 'Los Angeles',
+                            'zipcode': '90014',
+                            'timezoneoffset': -8,
+                            'dma': 803,
+                            'countryConfidence': 8,
+                            'cityConfidence': 5,
+                            'Center': {
+                                'Latitude': 34.0448,
+                                'Longitude': -118.2527
                             },
-                            "RegionType": 2,
-                            "SourceType": 1
+                            'RegionType': 2,
+                            'SourceType': 1
                         }],
-                        "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+08:00"),
-                        "author": "user",
-                        "inputMethod": "Keyboard",
-                        "text": prompt,
-                        "messageType": "Chat",
+                        'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+                        'author': 'user',
+                        'inputMethod': 'Keyboard',
+                        'text': prompt,
+                        'messageType': 'Chat',
                     },
-                    "conversationSignature": self.conversation_signature,
-                    "participant": {
-                        "id": self.client_id,
+                    'conversationSignature': self.conversation_signature,
+                    'participant': {
+                        'id': self.client_id,
                     },
-                    "conversationId": self.conversation_id,
+                    'conversationId': self.conversation_id,
                 },
             ],
-            "invocationId": str(self.invocation_id),
-            "target": "chat",
-            "type": 4,
+            'invocationId': str(self.invocation_id),
+            'target': 'chat',
+            'type': 4,
         }
         if search_result:
             have_search_result = [
-                "InternalSearchQuery",
-                "InternalSearchResult",
-                "InternalLoaderMessage",
-                "RenderCardRequest",
+                'InternalSearchQuery',
+                'InternalSearchResult',
+                'InternalLoaderMessage',
+                'RenderCardRequest',
             ]
-            self.struct["arguments"][0]["allowedMessageTypes"] += have_search_result
+            self.struct['arguments'][0]['allowedMessageTypes'] += have_search_result
         if webpage_context:
-            self.struct["arguments"][0]["previousMessages"] = [
+            self.struct['arguments'][0]['previousMessages'] = [
                 {
-                    "author": "user",
-                    "description": webpage_context,
-                    "contextType": "WebPage",
-                    "messageType": "Context",
-                    "messageId": "discover-web--page-ping-mriduna-----",
+                    'author': 'user',
+                    'description': webpage_context,
+                    'contextType': 'WebPage',
+                    'messageType': 'Context',
+                    'messageId': 'discover-web--page-ping-mriduna-----',
                 },
             ]
         self.invocation_id += 1
@@ -259,27 +271,20 @@ class _Conversation:
     def __init__(
         self,
         cookies: dict | None = None,
-        proxy: str | None = None,
         async_mode: bool = False,
     ) -> None:
         if async_mode:
             return
         self.struct: dict = {
-            "conversationId": None,
-            "clientId": None,
-            "conversationSignature": None,
-            "result": {
-                "value": "Success",
-                "message": None
+            'conversationId': None,
+            'clientId': None,
+            'conversationSignature': None,
+            'result': {
+                'value': 'Success',
+                'message': None
             },
         }
-        self.proxy = proxy
-        proxy = (
-            proxy or os.environ.get("all_proxy") or os.environ.get("ALL_PROXY") or os.environ.get("https_proxy")
-            or os.environ.get("HTTPS_PROXY") or None
-        )
-        if proxy is not None and proxy.startswith("socks5h://"):
-            proxy = "socks5://" + proxy[len("socks5h://"):]
+        proxy = _get_proxy()
         self.session = httpx.Client(
             proxies=proxy,
             timeout=60,
@@ -287,14 +292,14 @@ class _Conversation:
         )
         if cookies:
             for cookie in cookies:
-                self.session.cookies.set(cookie["name"], cookie["value"])
+                self.session.cookies.set(cookie['name'], cookie['value'])
 
         # Send GET request
         response = self.session.get(
-            url=os.environ.get("BING_PROXY_URL") or "https://edgeservices.bing.com/edgesvc/turing/conversation/create",
+            url=os.environ.get('BING_PROXY_URL') or 'https://edgeservices.bing.com/edgesvc/turing/conversation/create',
         )
         if response.status_code != 200:
-            response = self.session.get("https://edge.churchless.tech/edgesvc/turing/conversation/create", )
+            response = self.session.get('https://edge.churchless.tech/edgesvc/turing/conversation/create', )
         if response.status_code != 200:
             logger.error('[create], code: %s, response: %s', response.status_code, response.text)
             try:
@@ -303,36 +308,27 @@ class _Conversation:
             except NotAllowedToAccess as e:
                 raise e
             except Exception:
-                raise Exception("Authentication failed")
+                raise Exception('Authentication failed')
         try:
             self.struct = response.json()
         except (json.decoder.JSONDecodeError, NotAllowedToAccess) as exc:
-            raise Exception("Authentication failed. You have not been accepted into the beta.", ) from exc
-        if self.struct["result"]["value"] == "UnauthorizedRequest":
-            raise NotAllowedToAccess(self.struct["result"]["message"])
+            raise Exception('Authentication failed. You have not been accepted into the beta.', ) from exc
+        if self.struct['result']['value'] == 'UnauthorizedRequest':
+            raise NotAllowedToAccess(self.struct['result']['message'])
 
     @staticmethod
-    async def create(
-        cookies: dict,
-        proxy: str | None = None,
-    ) -> _Conversation:
+    async def create(cookies: dict, ) -> _Conversation:
         self = _Conversation(async_mode=True)
         self.struct = {
-            "conversationId": None,
-            "clientId": None,
-            "conversationSignature": None,
-            "result": {
-                "value": "Success",
-                "message": None
+            'conversationId': None,
+            'clientId': None,
+            'conversationSignature': None,
+            'result': {
+                'value': 'Success',
+                'message': None
             },
         }
-        self.proxy = proxy
-        proxy = (
-            proxy or os.environ.get("all_proxy") or os.environ.get("ALL_PROXY") or os.environ.get("https_proxy")
-            or os.environ.get("HTTPS_PROXY") or None
-        )
-        if proxy is not None and proxy.startswith("socks5h://"):
-            proxy = "socks5://" + proxy[len("socks5h://"):]
+        proxy = _get_proxy()
         transport = httpx.AsyncHTTPTransport(retries=5)
         async with httpx.AsyncClient(
                 proxies=proxy,
@@ -341,14 +337,14 @@ class _Conversation:
                 transport=transport,
         ) as client:
             for cookie in cookies:
-                client.cookies.set(cookie["name"], cookie["value"])
+                client.cookies.set(cookie['name'], cookie['value'])
             # Send GET request
             response = await client.get(
-                url=os.environ.get("BING_PROXY_URL")
-                or "https://edgeservices.bing.com/edgesvc/turing/conversation/create",
+                url=os.environ.get('BING_PROXY_URL')
+                or 'https://edgeservices.bing.com/edgesvc/turing/conversation/create',
             )
             if response.status_code != 200:
-                response = await client.get("https://edge.churchless.tech/edgesvc/turing/conversation/create", )
+                response = await client.get('https://edge.churchless.tech/edgesvc/turing/conversation/create', )
         if response.status_code != 200:
             try:
                 logger.error('[create], code: %s, response: %s', response.status_code, response.text)
@@ -357,13 +353,13 @@ class _Conversation:
             except NotAllowedToAccess as e:
                 raise e
             except Exception:
-                raise Exception("Authentication failed")
+                raise Exception('Authentication failed')
         try:
             self.struct = response.json()
         except (json.decoder.JSONDecodeError, NotAllowedToAccess) as exc:
-            raise Exception("Authentication failed. You have not been accepted into the beta.", ) from exc
-        if self.struct["result"]["value"] == "UnauthorizedRequest":
-            raise NotAllowedToAccess(self.struct["result"]["message"])
+            raise Exception('Authentication failed. You have not been accepted into the beta.', ) from exc
+        if self.struct['result']['value'] == 'UnauthorizedRequest':
+            raise NotAllowedToAccess(self.struct['result']['message'])
         return self
 
 
@@ -373,14 +369,15 @@ class _ChatHub:
     """
 
     def __init__(self, conversation: _Conversation) -> None:
-        self.wss: websockets.WebSocketClientProtocol | None = None
+        self.session: aiohttp.ClientSession | None = None
+        self.wss: aiohttp.ClientWebSocketResponse | None = None
         self.request: _ChatHubRequest
-        self.loop: bool
-        self.task: asyncio.Task
+        self.wss = None
+        self.session = None
         self.request = _ChatHubRequest(
-            conversation_signature=conversation.struct["conversationSignature"],
-            client_id=conversation.struct["clientId"],
-            conversation_id=conversation.struct["conversationId"],
+            conversation_signature=conversation.struct['conversationSignature'],
+            client_id=conversation.struct['clientId'],
+            conversation_id=conversation.struct['conversationId'],
         )
 
     async def ask_stream(
@@ -393,23 +390,45 @@ class _ChatHub:
         webpage_context: str | None = None,
         search_result: bool = False,
         cookie_path: str = '',
+        reconnect: bool = False,
     ) -> Generator[str, None, None]:
         """
         Ask a question to the bot
         """
-        if self.wss and not self.wss.closed:
-            await self.wss.close()
-        # Check if websocket is closed
-        self.wss = await websockets.connect(
-            wss_link,
-            extra_headers=HEADERS,
-            max_size=None,
-            ssl=ssl_context,
-            ping_interval=None,
-        )
-        await self._initial_handshake()
+        if reconnect:
+            logger.info(
+                '[Reconnect] reconnect session, %s, closed: %s, closing: %s.',
+                self.wss,
+                self.wss.closed if self.wss else False,
+                self.wss._closing if self.wss else False,
+            )
+            await self.close()
+        else:
+            try:
+                if self.wss and not self.wss.closed and not self.wss._closing:
+                    await self.wss.ping()
+            except:
+                reconnect = True
+        if reconnect or not (self.wss and not self.wss.closed and not self.wss._closing and self.session
+                             and not self.session.closed):
+            timeout = aiohttp.ClientTimeout(total=6 * 3600)
+            self.session = aiohttp.ClientSession(timeout=timeout)
+            self.wss = await self.session.ws_connect(
+                wss_link,
+                headers=HEADERS,
+                ssl=ssl_context,
+                timeout=6 * 3600 - 5,
+                autoclose=True,
+            )
+            await self._initial_handshake()
+        else:
+            logger.info(
+                '[Session] reuse session, %s, closed: %s, closing: %s.',
+                self.wss,
+                self.wss.closed,
+                self.wss._closing,
+            )
         if self.request.invocation_id == 0:
-            # Construct a ChatHub request
             self.request.update(
                 prompt=prompt,
                 conversation_style=conversation_style,
@@ -418,25 +437,25 @@ class _ChatHub:
                 search_result=search_result,
             )
         else:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(proxies=_get_proxy()) as client:
                 response = await client.post(
-                    "https://sydney.bing.com/sydney/UpdateConversation/",
+                    'https://sydney.bing.com/sydney/UpdateConversation/',
                     json={
-                        "messages": [
+                        'messages': [
                             {
-                                "author": "user",
-                                "description": webpage_context,
-                                "contextType": "WebPage",
-                                "messageType": "Context",
+                                'author': 'user',
+                                'description': webpage_context,
+                                'contextType': 'WebPage',
+                                'messageType': 'Context',
                             },
                         ],
-                        "conversationId": self.request.conversation_id,
-                        "source": "cib",
-                        "traceId": _get_ran_hex(32),
-                        "participant": {
-                            "id": self.request.client_id
+                        'conversationId': self.request.conversation_id,
+                        'source': 'cib',
+                        'traceId': _get_ran_hex(32),
+                        'participant': {
+                            'id': self.request.client_id
                         },
-                        "conversationSignature": self.request.conversation_signature,
+                        'conversationSignature': self.request.conversation_signature,
                     },
                 )
                 if response.status_code != 200:
@@ -446,7 +465,7 @@ class _ChatHub:
                         response.url,
                         response.text,
                     )
-                    raise Exception("Update web page context failed，请稍后再试吧！")
+                    raise Exception('Update web page context failed，请稍后再试吧！')
                 # Construct a ChatHub request
                 self.request.update(
                     prompt=prompt,
@@ -454,55 +473,58 @@ class _ChatHub:
                     options=options,
                 )
         # Send request
-        await self.wss.send(_append_identifier(self.request.struct))
+        await self.wss.send_str(_append_identifier(self.request.struct))
         final = False
         draw = False
-        resp_txt = ""
-        result_text = ""
-        resp_txt_no_link = ""
+        resp_txt = ''
+        result_text = ''
+        resp_txt_no_link = ''
         while not final:
-            objects = str(await self.wss.recv()).split(DELIMITER)
+            msg = await self.wss.receive(timeout=60)
+            if not msg.data:
+                raise Exception('响应异常')
+            objects = msg.data.split(DELIMITER)
             for obj in objects:
                 if obj is None or not obj:
                     continue
                 response = json.loads(obj)
-                if response.get("type") != 2 and raw:
+                if response.get('type') != 2 and raw:
                     yield False, response
-                elif response.get("type") == 1 and response["arguments"][0].get("messages", ):
+                elif response.get('type') == 1 and response['arguments'][0].get('messages', ):
                     if not draw:
-                        if (response["arguments"][0]["messages"][0].get("messageType") == "GenerateContentQuery"):
+                        if (response['arguments'][0]['messages'][0].get('messageType') == 'GenerateContentQuery'):
                             images = await async_image_gen(
-                                response["arguments"][0]["messages"][0]["text"],
+                                response['arguments'][0]['messages'][0]['text'],
                                 cookie_path=cookie_path,
                             )
                             for i, image in enumerate(images):
-                                resp_txt = resp_txt + f"\n![image{i}]({image})"
+                                resp_txt = resp_txt + f'\n![image{i}]({image})'
                             draw = True
-                        if (response["arguments"][0]["messages"][0]["contentOrigin"] != "Apology") and not draw:
-                            resp_txt = result_text + response["arguments"][0]["messages"][0]["adaptiveCards"][0][
-                                "body"][0].get("text", "")
-                            resp_txt_no_link = result_text + response["arguments"][0]["messages"][0].get("text", "")
-                            if response["arguments"][0]["messages"][0].get("messageType", ):
+                        if (response['arguments'][0]['messages'][0]['contentOrigin'] != 'Apology') and not draw:
+                            resp_txt = result_text + response['arguments'][0]['messages'][0]['adaptiveCards'][0][
+                                'body'][0].get('text', '')
+                            resp_txt_no_link = result_text + response['arguments'][0]['messages'][0].get('text', '')
+                            if response['arguments'][0]['messages'][0].get('messageType', ):
                                 resp_txt = (
-                                    resp_txt + response["arguments"][0]["messages"][0]["adaptiveCards"][0]["body"][0]
-                                    ["inlines"][0].get("text") + "\n"
+                                    resp_txt + response['arguments'][0]['messages'][0]['adaptiveCards'][0]['body'][0]
+                                    ['inlines'][0].get('text') + '\n'
                                 )
                                 result_text = (
-                                    result_text + response["arguments"][0]["messages"][0]["adaptiveCards"][0]["body"][0]
-                                    ["inlines"][0].get("text") + "\n"
+                                    result_text + response['arguments'][0]['messages'][0]['adaptiveCards'][0]['body'][0]
+                                    ['inlines'][0].get('text') + '\n'
                                 )
                         yield False, resp_txt
 
-                elif response.get("type") == 2:
+                elif response.get('type') == 2:
                     try:
                         logger.info('[Response] %s', response)
                         if draw:
-                            response["item"]["messages"][1]["adaptiveCards"][0]["body"][0]["text"] = resp_txt
-                        if (response["item"]["messages"][-1]["contentOrigin"] == "Apology" and resp_txt):
-                            response["item"]["messages"][-1]["text"] = resp_txt_no_link
-                            response["item"]["messages"][-1]["adaptiveCards"][0]["body"][0]["text"] = resp_txt
+                            response['item']['messages'][1]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
+                        if (response['item']['messages'][-1]['contentOrigin'] == 'Apology' and resp_txt):
+                            response['item']['messages'][-1]['text'] = resp_txt_no_link
+                            response['item']['messages'][-1]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
                             print(
-                                "Preserved the message from being deleted",
+                                'Preserved the message from being deleted',
                                 file=sys.stderr,
                             )
                     except KeyError:
@@ -511,11 +533,13 @@ class _ChatHub:
                     yield True, response
 
     async def _initial_handshake(self) -> None:
-        await self.wss.send(_append_identifier({
-            "protocol": "json",
-            "version": 1
+        if not self.wss:
+            return
+        await self.wss.send_str(_append_identifier({
+            'protocol': 'json',
+            'version': 1
         }))
-        await self.wss.recv()
+        await self.wss.receive(timeout=60)
 
     async def close(self) -> None:
         """
@@ -523,6 +547,8 @@ class _ChatHub:
         """
         if self.wss and not self.wss.closed:
             await self.wss.close()
+        if self.session and not self.session.closed:
+            await self.session.close()
 
 
 class Chatbot:
@@ -532,26 +558,23 @@ class Chatbot:
 
     def __init__(
         self,
-        proxy: str | None = None,
         cookie_path: str = '',
     ) -> None:
         self.cookie_path = cookie_path
         self.load_cookie()
-        self.proxy: str | None = proxy
-        self.chat_hub: _ChatHub = _ChatHub(_Conversation(self.cookies, self.proxy), )
+        self.chat_hub: _ChatHub = _ChatHub(_Conversation(self.cookies))
 
     @staticmethod
-    async def create(proxy: str | None = None, ):
+    async def create():
         self = Chatbot.__new__(Chatbot)
         self.load_cookie()
-        self.proxy = proxy
-        self.chat_hub = _ChatHub(await _Conversation.create(self.cookies, self.proxy), )
+        self.chat_hub = _ChatHub(await _Conversation.create(self.cookies))
         return self
 
     async def ask(
         self,
         prompt: str,
-        wss_link: str = "wss://sydney.bing.com/sydney/ChatHub",
+        wss_link: str = 'wss://sydney.bing.com/sydney/ChatHub',
         conversation_style: CONVERSATION_STYLE_TYPE = None,
         options: dict = None,
         webpage_context: str | None = None,
@@ -571,16 +594,18 @@ class Chatbot:
         ):
             if final:
                 return response
+        return {}
 
     async def ask_stream(
         self,
         prompt: str,
-        wss_link: str = "wss://sydney.bing.com/sydney/ChatHub",
+        wss_link: str = 'wss://sydney.bing.com/sydney/ChatHub',
         conversation_style: CONVERSATION_STYLE_TYPE = None,
         raw: bool = False,
         options: dict = None,
         webpage_context: str | None = None,
         search_result: bool = False,
+        reconnect: bool = False,
     ) -> Generator[str, None, None]:
         """
         Ask a question to the bot
@@ -594,6 +619,7 @@ class Chatbot:
                 webpage_context=webpage_context,
                 search_result=search_result,
                 cookie_path=self.cookie_path,
+                reconnect=reconnect,
         ):
             yield response
 
@@ -609,11 +635,11 @@ class Chatbot:
         """
         await self.close()
         self.load_cookie()
-        self.chat_hub = _ChatHub(await _Conversation.create(self.cookies, self.proxy), )
+        self.chat_hub = _ChatHub(await _Conversation.create(self.cookies))
 
     def load_cookie(self):
         try:
             with open(self.cookie_path) as f:
                 self.cookies = json.load(f)
         except FileNotFoundError as exc:
-            raise FileNotFoundError("Cookie file not found") from exc
+            raise FileNotFoundError('Cookie file not found') from exc
