@@ -1,6 +1,6 @@
 // components/quotes/quotes.js
 
-var urlRe = /\[\d+\]:.*/g
+var urlRe = /\[\d+\]:(\s)?http.*/g
 
 Component({
   /**
@@ -57,7 +57,7 @@ Component({
         var i = k[0].match(/\[(\d+)\]/)[1]
         var url = k[1]
         var host = url.split("/").splice(0, 3).join("/")
-        var title = k.slice(2).join("").replaceAll('"', "")
+        var title = k.slice(2).join("").replaceAll('"', "").replaceAll('\\', '')
         res.push({
           i,
           url,

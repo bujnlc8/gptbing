@@ -6,17 +6,17 @@ import {
 	cacheChatNum
 } from "../../config"
 
-const initHeight = inputPop() ? 15 : 2
+const initHeight = systemInfo.platform == "ios" ? 15 : 5
 // 是否使用websocket请求
 var useWebsocket = true
-try {
-	var notuseWebsocket = wx.getStorageSync("notuseWebsocket")
-	if (notuseWebsocket) {
-		useWebsocket = false
-	}
-} catch (e) {
-	useWebsocket = true
-}
+// try {
+// 	var notuseWebsocket = wx.getStorageSync("notuseWebsocket")
+// 	if (notuseWebsocket) {
+// 		useWebsocket = false
+// 	}
+// } catch (e) {
+// 	useWebsocket = true
+// }
 var showHelpTip = true
 try {
 	var closeHelpTip = wx.getStorageSync("closeHelpTip")
@@ -28,7 +28,7 @@ try {
 }
 
 function inputPop() {
-	return systemInfo.platform == "ios"
+	return systemInfo.platform == "ios" || systemInfo.platform == "android"
 }
 // 自增对话
 var autoIncrConversation = 0
@@ -111,7 +111,7 @@ Page({
 			balanced: "#1B4AEF",
 			precise: "#005366"
 		},
-		chatBoxHeight: systemInfo.windowHeight - 75,
+		chatBoxHeight: systemInfo.windowHeight - (initHeight + 60),
 		showHelpTip: showHelpTip,
 	},
 	inputFocus(e) {
@@ -356,11 +356,13 @@ Page({
 		if (final) {
 			app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 3))
 		}
-		setTimeout(() => {
-			cht.setData({
-				scrollId: "item" + (autoIncrConversation + "9999"),
-			})
-		}, 100)
+		if(autoIncrConversation % 2 == 0){
+			setTimeout(() => {
+				cht.setData({
+					scrollId: "item" + (autoIncrConversation + "9999"),
+				})
+			}, 100)
+		}
 	},
 	submit() {
 		var content = this.data.content

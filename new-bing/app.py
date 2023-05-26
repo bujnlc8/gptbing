@@ -62,9 +62,9 @@ def check_hidden(text):
     return False
 
 
-def get_cookie_file(sid, cookie_files):
+def get_cookie_file(sid, cookie_files, reset=False):
     # 优先获取最后一个
-    if show_chatgpt(sid):
+    if not reset and show_chatgpt(sid):
         return cookie_files[-1]
     # 根据sid相加取余算出一个数
     total_cookie_num = len(cookie_files) - 1
@@ -83,7 +83,7 @@ def get_bot(sid, cookie_path=None):
                 bot.cookie_path = cookie_path
             return bot
     cookie_path = cookie_path or get_cookie_file(sid, COOKIE_FILES)
-    logger.info('[Bot Cookie] sid: %s, cookie_path: %s', sid, cookie_path)
+    logger.info('[BotCookie] sid: %s, cookie_path: %s', sid, cookie_path)
     bot = Chatbot(cookie_path=cookie_path)
     bots[sid] = {
         'bot': bot,
@@ -92,17 +92,8 @@ def get_bot(sid, cookie_path=None):
     return bot
 
 
-def reset_cookie(sid):
-    cookie_files = COOKIE_FILES
-    total_cookie_num = len(cookie_files) - 1
-    return cookie_files[(
-        sum([ord(x)
-             for x in sid.replace('_', '').replace('-', '')[10:]]) + conversation_ctr.get_switch_cookie_step(sid)
-    ) % total_cookie_num]
-
-
-async def reset_conversation(sid, cookie_path=None):
-    await get_bot(sid, cookie_path=cookie_path).reset()
+async def reset_conversation(sid, reset=False):
+    await get_bot(sid, cookie_path=get_cookie_file(sid, COOKIE_FILES, reset=reset)).reset()
     bots[sid]['expired'] = datetime.now() + timedelta(hours=5, minutes=55)
 
 
@@ -169,7 +160,11 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
         if final:
             processed_data = await process_data(res, q, sid, auto_reset=1)
             if processed_data['data']['status'] == 'Throttled':
-                await reset_conversation(sid, cookie_path=reset_cookie(sid))
+                await reset_conversation(sid, reset=True)
+                processed_data['data']['suggests'].append(q)
+            if processed_data['data']['status'] == 'ProcessingMessage':
+                processed_data['data']['status'] = 'Success'
+                processed_data['data']['text'] = processed_data['data']['message']
                 processed_data['data']['suggests'].append(q)
             if processed_data['data']['status'] == 'InternalError':
                 if last_not_final_text:
@@ -356,7 +351,7 @@ async def chat(request):
     auto_reset = request.json.get('auto_reset', '')
     data = await process_data(res, request.json.get('q'), sid, auto_reset)
     if data['data']['status'] == 'Throttled':
-        await reset_conversation(sid, cookie_path=reset_cookie(sid))
+        await reset_conversation(sid, reset=True)
         res = await do_chat(request)
         data = await process_data(res, request.json.get('q'), sid, auto_reset)
     return json(data)

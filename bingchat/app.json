@@ -9,7 +9,7 @@
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#ffffff",
-    "navigationBarTitleText": "New Bing 🤖",
+    "navigationBarTitleText": "New Bing",
     "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",

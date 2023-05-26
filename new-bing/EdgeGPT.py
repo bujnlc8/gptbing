@@ -16,7 +16,6 @@ from typing import Generator, Literal, Optional, Union
 import aiohttp
 import certifi
 import httpx
-import websockets.client as websockets
 from BingImageCreator import async_image_gen
 from logger import logger
 
@@ -409,6 +408,7 @@ class _ChatHub:
                     await self.wss.ping()
             except:
                 reconnect = True
+                await self.close()
         if reconnect or not (self.wss and not self.wss.closed and not self.wss._closing and self.session
                              and not self.session.closed):
             timeout = aiohttp.ClientTimeout(total=6 * 3600)
@@ -480,8 +480,9 @@ class _ChatHub:
         result_text = ''
         resp_txt_no_link = ''
         while not final:
-            msg = await self.wss.receive(timeout=60)
+            msg = await self.wss.receive(timeout=600)
             if not msg.data:
+                await self.close()
                 raise Exception('响应异常')
             objects = msg.data.split(DELIMITER)
             for obj in objects:
@@ -539,7 +540,7 @@ class _ChatHub:
             'protocol': 'json',
             'version': 1
         }))
-        await self.wss.receive(timeout=60)
+        await self.wss.receive(timeout=600)
 
     async def close(self) -> None:
         """
@@ -583,18 +584,22 @@ class Chatbot:
         """
         Ask a question to the bot
         """
-        async for final, response in self.chat_hub.ask_stream(
-                prompt=prompt,
-                conversation_style=conversation_style,
-                wss_link=wss_link,
-                options=options,
-                webpage_context=webpage_context,
-                search_result=search_result,
-                cookie_path=self.cookie_path,
-        ):
-            if final:
-                return response
-        return {}
+        try:
+            async for final, response in self.chat_hub.ask_stream(
+                    prompt=prompt,
+                    conversation_style=conversation_style,
+                    wss_link=wss_link,
+                    options=options,
+                    webpage_context=webpage_context,
+                    search_result=search_result,
+                    cookie_path=self.cookie_path,
+            ):
+                if final:
+                    return response
+            return {}
+        except Exception as e:
+            await self.close()
+            raise e
 
     async def ask_stream(
         self,
@@ -610,18 +615,22 @@ class Chatbot:
         """
         Ask a question to the bot
         """
-        async for response in self.chat_hub.ask_stream(
-                prompt=prompt,
-                conversation_style=conversation_style,
-                wss_link=wss_link,
-                raw=raw,
-                options=options,
-                webpage_context=webpage_context,
-                search_result=search_result,
-                cookie_path=self.cookie_path,
-                reconnect=reconnect,
-        ):
-            yield response
+        try:
+            async for response in self.chat_hub.ask_stream(
+                    prompt=prompt,
+                    conversation_style=conversation_style,
+                    wss_link=wss_link,
+                    raw=raw,
+                    options=options,
+                    webpage_context=webpage_context,
+                    search_result=search_result,
+                    cookie_path=self.cookie_path,
+                    reconnect=reconnect,
+            ):
+                yield response
+        except Exception as e:
+            await self.close()
+            raise e
 
     async def close(self) -> None:
         """
