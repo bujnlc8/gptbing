@@ -19,7 +19,7 @@ try {
 }
 
 function inputPop() {
-  return systemInfo.platform == "ios" || systemInfo.platform == "android"
+  return systemInfo.platform == "ios"
 }
 // 自增对话
 var autoIncrConversation = 0
