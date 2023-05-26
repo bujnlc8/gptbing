@@ -33,6 +33,10 @@ Component({
     showPrevBt: {
       type: Boolean,
       value: false
+		},
+		loadData: {
+      type: Boolean,
+      value: true
     }
   },
   pageLifetimes: {
@@ -143,6 +147,9 @@ Component({
       })
     },
     initMessageHistory() {
+			if(!this.data.loadData){
+				return
+			}
       var that = this
       wx.getStorage({
         key: that.data.mode == "normal" ? "chatList" : "chatListCollected",

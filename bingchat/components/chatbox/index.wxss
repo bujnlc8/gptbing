@@ -21,7 +21,7 @@
   width: 45px;
   height: 45px;
   border-radius: 50%;
-  background-color: #d0dfe6;
+  background-color: #f5fafe;
 }
 
 .dt {

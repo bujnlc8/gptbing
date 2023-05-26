@@ -1,6 +1,16 @@
-<chat-box  id="chat-id"  bindsuggestSubmit="onSuggestSubmit" bindcancelReceive="onCancelReceive" bindswitchRequestMethod="switchRequestMethod" catchlongpress="longPress" chatType="{{chatType}}" mode="normal"></chat-box>
+<chat-box  id="chat-id"  bindsuggestSubmit="onSuggestSubmit" bindcancelReceive="onCancelReceive" bindswitchRequestMethod="switchRequestMethod" catchlongpress="longPress" chatType="{{chatType}}" mode="normal" style="height: {{chatBoxHeight}}px"></chat-box>
 <view style="bottom:{{inputBottom}}px; border-radius: 12px;margin-left: 1%;z-index: 10000; width: 98%;min-height: 58px;position: fixed;background-color: #f4f6f8;display: flex;align-items:flex-start;justify-content: space-between;border: {{textareaFocus ? '1px': '0px'}} solid {{chatStyleBg[chatStyle]}};">
-	<textarea bindfocus="inputFocus" bindblur="inputBlur" value="{{content}}" adjust-position="{{false}}"  focus="{{textareaFocus}}" maxlength="10000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder="{{systemInfo.platform == 'mac' || systemInfo.platform == 'windows' ? '请输入问题，输入>>>提交...': '请输入问题...'}}" style="padding: 6px;flex: 9;line-height: normal;" placeholder-style="color: {{textareaFocus ? chatStyleBg[chatStyle] : 'b4bbc4'}}" catchtap="focus" bindinput="inputData" catchlongpress="scrollBottom"></textarea>
+	<textarea bindfocus="inputFocus" bindblur="inputBlur" value="{{content}}" adjust-position="{{false}}"  focus="{{textareaFocus}}" maxlength="10000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder='请输入问题...' style="padding: 6px;flex: 9;line-height: normal;" placeholder-style="color: {{textareaFocus ? chatStyleBg[chatStyle] : 'b4bbc4'}}" catchtap="focus" bindinput="inputData" catchlongpress="scrollBottom"></textarea>
 	<view style="background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-radius: 0 12px 12px 0;height: 50px;cursor: pointer;margin-right: 8px;padding-top:6px;font-size: 18px;" catchtap="submit" wx:if="{{systemInfo.platform != 'ios'}}">发送</view>
 </view>
 <popup message="{{searchPopMessage}}" wx:if="{{showSearchPop}}" bindPopButtonClick="onPopButtonClick" data-q="{{q}}"></popup>
+<view class="helpTip" wx:if="{{showHelpTip}}">
+	<view class="tipTitle">使用帮助</view>
+	<view class="tipItem">1、输入问题，点击发送按钮开始聊天；</view>
+	<view class="tipItem">2、点击页面空白处可选择更多菜单，包括跳转到收藏页面、选择对话模式等；</view>
+	<view class="tipItem">3、长按对话框可对内容进行复制；</view>
+	<view class="tipItem">4、点击头像可切换渲染(有些渲染出来的效果可能不佳)；</view>
+	<view class="tipItem">5、点击对话框右上方的点可进行收藏操作；</view>
+	<view class="tipItem">6、使用过程中有任何的建议或意见欢迎反馈😊</view>
+	<view class="tipBtn" catchtap="closeHelpTip"><text class="tipBtnText">知道了</text></view>
+</view>
