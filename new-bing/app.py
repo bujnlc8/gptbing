@@ -44,7 +44,6 @@ OPENAI_DEFAULT_PROMPT = {
 }
 
 HIDDEN_TEXTS = [
-    '实在不好意思，我现在无法对此做出回应。',
     '实在抱歉，我现在无法回答这个问题。',
     '嗯……对于这个问题很抱歉',
     'try a different topic.',
@@ -201,7 +200,7 @@ def check_forbidden_words(sid, q):
             '',
             -1,
         )
-        send_mail('forbid ' + sid, q + '\n包含敏感词：' + '\n'.join(forbid_words))
+        send_mail('forbid ' + sid, q + '\n包含敏感词：\n' + '\n'.join(forbid_words))
         return data
 
 
@@ -233,18 +232,18 @@ async def ws_chat(_, ws):
         if msg:
             if 'Cannot write to closing transport' in msg:
                 reconnect = True
+            if 'Your prompt has been blocked by Bing' in msg:
+                try_times = 0
             while try_times and msg:
                 try:
                     try_times -= 1
-                    if 'Update web page context failed' in msg:
-                        await reset_conversation(sid)
                     if '无权限使用此服务' in msg:
                         break
                     msg = ''
                     await ask_bing(
                         ws,
                         sid,
-                        '刚刚发生了点错误，请再耐心回答下面的问题：\n' + q,
+                        '刚刚发生了点错误，请再耐心回答下面的问题：\n' + q if '刚刚发生了点错误，请再耐心回答下面的问题' not in q else q,
                         style,
                         reconnect=reconnect,
                     )
@@ -258,8 +257,6 @@ async def ws_chat(_, ws):
                     reconnect = True
             if msg:
                 reconnect = False
-                if 'Update web page context failed' in msg:
-                    await reset_conversation(sid)
                 await ws.send(raw_json.dumps({
                     'final': True,
                     'data': make_response_data('Error', msg, [q], msg)

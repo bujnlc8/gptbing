@@ -169,8 +169,6 @@ class _ChatHubRequest:
         prompt: str,
         conversation_style: CONVERSATION_STYLE_TYPE,
         options: list | None = None,
-        webpage_context: str | None = None,
-        search_result: bool = False,
     ) -> None:
         """
         Updates request object
@@ -194,9 +192,7 @@ class _ChatHubRequest:
                     'optionsSets': options,
                     'allowedMessageTypes': [
                         'Chat',
-                        'SemanticSerp',
                         'GenerateContentQuery',
-                        'SearchQuery',
                         'Disengaged',
                     ],
                     'sliceIds': [],
@@ -241,24 +237,6 @@ class _ChatHubRequest:
             'target': 'chat',
             'type': 4,
         }
-        if search_result:
-            have_search_result = [
-                'InternalSearchQuery',
-                'InternalSearchResult',
-                'InternalLoaderMessage',
-                'RenderCardRequest',
-            ]
-            self.struct['arguments'][0]['allowedMessageTypes'] += have_search_result
-        if webpage_context:
-            self.struct['arguments'][0]['previousMessages'] = [
-                {
-                    'author': 'user',
-                    'description': webpage_context,
-                    'contextType': 'WebPage',
-                    'messageType': 'Context',
-                    'messageId': 'discover-web--page-ping-mriduna-----',
-                },
-            ]
         self.invocation_id += 1
 
 
@@ -386,8 +364,6 @@ class _ChatHub:
         conversation_style: CONVERSATION_STYLE_TYPE = None,
         raw: bool = False,
         options: dict = None,
-        webpage_context: str | None = None,
-        search_result: bool = False,
         cookie_path: str = '',
         reconnect: bool = False,
     ) -> Generator[str, None, None]:
@@ -398,8 +374,8 @@ class _ChatHub:
             logger.info(
                 '[Reconnect] reconnect session, %s, closed: %s, closing: %s.',
                 self.wss,
-                self.wss.closed if self.wss else False,
-                self.wss._closing if self.wss else False,
+                self.wss.closed if self.wss else None,
+                self.wss._closing if self.wss else None,
             )
             await self.close()
         else:
@@ -428,51 +404,14 @@ class _ChatHub:
                 self.wss.closed,
                 self.wss._closing,
             )
-        if self.request.invocation_id == 0:
-            self.request.update(
-                prompt=prompt,
-                conversation_style=conversation_style,
-                options=options,
-                webpage_context=webpage_context,
-                search_result=search_result,
-            )
-        else:
-            async with httpx.AsyncClient(proxies=_get_proxy()) as client:
-                response = await client.post(
-                    'https://sydney.bing.com/sydney/UpdateConversation/',
-                    json={
-                        'messages': [
-                            {
-                                'author': 'user',
-                                'description': webpage_context,
-                                'contextType': 'WebPage',
-                                'messageType': 'Context',
-                            },
-                        ],
-                        'conversationId': self.request.conversation_id,
-                        'source': 'cib',
-                        'traceId': _get_ran_hex(32),
-                        'participant': {
-                            'id': self.request.client_id
-                        },
-                        'conversationSignature': self.request.conversation_signature,
-                    },
-                )
-                if response.status_code != 200:
-                    logger.error(
-                        '[update], code: %s, url: %s, response:\n %s',
-                        response.status_code,
-                        response.url,
-                        response.text,
-                    )
-                    raise Exception('Update web page context failed，请稍后再试吧！')
-                # Construct a ChatHub request
-                self.request.update(
-                    prompt=prompt,
-                    conversation_style=conversation_style,
-                    options=options,
-                )
-        # Send request
+        self.request.update(
+            prompt=prompt,
+            conversation_style=conversation_style,
+            options=options,
+        )
+        #  await self.wss.send_str(_append_identifier({
+        #      'type': 6,
+        #  }))
         await self.wss.send_str(_append_identifier(self.request.struct))
         final = False
         draw = False
@@ -480,13 +419,12 @@ class _ChatHub:
         result_text = ''
         resp_txt_no_link = ''
         while not final:
-            msg = await self.wss.receive(timeout=600)
-            if not msg.data:
-                await self.close()
-                raise Exception('响应异常')
+            msg = await self.wss.receive(timeout=120)
+            if msg.data is None:
+                continue
             objects = msg.data.split(DELIMITER)
             for obj in objects:
-                if obj is None or not obj:
+                if not obj:
                     continue
                 response = json.loads(obj)
                 if response.get('type') != 2 and raw:
@@ -540,7 +478,7 @@ class _ChatHub:
             'protocol': 'json',
             'version': 1
         }))
-        await self.wss.receive(timeout=600)
+        await self.wss.receive(timeout=60)
 
     async def close(self) -> None:
         """
@@ -578,8 +516,6 @@ class Chatbot:
         wss_link: str = 'wss://sydney.bing.com/sydney/ChatHub',
         conversation_style: CONVERSATION_STYLE_TYPE = None,
         options: dict = None,
-        webpage_context: str | None = None,
-        search_result: bool = False,
     ) -> dict:
         """
         Ask a question to the bot
@@ -590,8 +526,6 @@ class Chatbot:
                     conversation_style=conversation_style,
                     wss_link=wss_link,
                     options=options,
-                    webpage_context=webpage_context,
-                    search_result=search_result,
                     cookie_path=self.cookie_path,
             ):
                 if final:
@@ -608,8 +542,6 @@ class Chatbot:
         conversation_style: CONVERSATION_STYLE_TYPE = None,
         raw: bool = False,
         options: dict = None,
-        webpage_context: str | None = None,
-        search_result: bool = False,
         reconnect: bool = False,
     ) -> Generator[str, None, None]:
         """
@@ -622,8 +554,6 @@ class Chatbot:
                     wss_link=wss_link,
                     raw=raw,
                     options=options,
-                    webpage_context=webpage_context,
-                    search_result=search_result,
                     cookie_path=self.cookie_path,
                     reconnect=reconnect,
             ):
