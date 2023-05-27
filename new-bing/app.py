@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import asyncio
 import json as raw_json
 import os
 import re
@@ -162,9 +163,10 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
                 await reset_conversation(sid, reset=True)
                 processed_data['data']['suggests'].append(q)
             if processed_data['data']['status'] == 'ProcessingMessage':
-                processed_data['data']['status'] = 'Success'
-                processed_data['data']['text'] = processed_data['data']['message']
-                processed_data['data']['suggests'].append(q)
+                await reset_conversation(sid)
+                raise Exception(
+                    'The last message is being processed. Please wait for a while before submitting further messages.'
+                )
             if processed_data['data']['status'] == 'InternalError':
                 if last_not_final_text:
                     processed_data = make_response_data(
@@ -232,6 +234,8 @@ async def ws_chat(_, ws):
         if msg:
             if 'Cannot write to closing transport' in msg:
                 reconnect = True
+                # 等待上一个回答完成
+                await asyncio.sleep(60)
             if 'Your prompt has been blocked by Bing' in msg:
                 try_times = 0
             while try_times and msg:
@@ -243,7 +247,7 @@ async def ws_chat(_, ws):
                     await ask_bing(
                         ws,
                         sid,
-                        '刚刚发生了点错误，请再耐心回答下面的问题：\n' + q if '刚刚发生了点错误，请再耐心回答下面的问题' not in q else q,
+                        q,
                         style,
                         reconnect=reconnect,
                     )
@@ -255,6 +259,8 @@ async def ws_chat(_, ws):
                     msg = str(e) or 'New Bing服务异常，请稍后再试！'
                 if 'Cannot write to closing transport' in msg:
                     reconnect = True
+                    # 等待上一个回答完成
+                    await asyncio.sleep(60)
             if msg:
                 reconnect = False
                 await ws.send(raw_json.dumps({
@@ -310,7 +316,7 @@ async def process_data(res, q, sid, auto_reset=None):
             if not text:
                 if 'text' not in item[1]:
                     await reset_conversation(sid)
-                    text = '抱歉，New Bing已结束对话。现已开启新一轮对话。'
+                    text = '抱歉，New Bing已结束当前聊天。现已开启新一轮对话。'
                     logger.error('响应异常：%s', res)
                 else:
                     text = item[1]['text']
@@ -319,7 +325,7 @@ async def process_data(res, q, sid, auto_reset=None):
                         for x in item[index]['suggestedResponses']] if 'suggestedResponses' in item[index] else []
         else:
             await reset_conversation(sid)
-            text = '抱歉，New Bing已结束对话。现已开启新一轮对话。'
+            text = '抱歉，New Bing已结束当前聊天。现已开启新一轮对话。'
             logger.error('响应异常：%s', res)
             suggests = [q]
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''

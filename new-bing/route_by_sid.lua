@@ -47,6 +47,8 @@ if not sid then
         ngx.var.backend = 'http://127.0.0.1:8000'
     end
 else
-    ngx.var.backend = 'http://127.0.0.1:8004'
+    math.randomseed(os.time())
+    local port = math.random(8000, 8004)
+    ngx.var.backend = 'http://127.0.0.1:'..port
     ngx.log(ngx.ERR, 'sid: ' .. sid .. ' backend: ' .. ngx.var.backend)
 end

@@ -380,21 +380,21 @@ class _ChatHub:
             await self.close()
         else:
             try:
-                if self.wss and not self.wss.closed and not self.wss._closing:
+                if self.wss:
                     await self.wss.ping()
             except:
                 reconnect = True
                 await self.close()
-        if reconnect or not (self.wss and not self.wss.closed and not self.wss._closing and self.session
-                             and not self.session.closed):
+        if reconnect or not (self.wss and not self.wss.closed and not self.wss._closing
+                             and not self.wss._writer._closing and self.session and not self.session.closed):
             timeout = aiohttp.ClientTimeout(total=6 * 3600)
             self.session = aiohttp.ClientSession(timeout=timeout)
             self.wss = await self.session.ws_connect(
                 wss_link,
                 headers=HEADERS,
                 ssl=ssl_context,
-                timeout=6 * 3600 - 5,
                 autoclose=True,
+                timeout=6 * 3600 - 5,
             )
             await self._initial_handshake()
         else:
@@ -418,10 +418,18 @@ class _ChatHub:
         resp_txt = ''
         result_text = ''
         resp_txt_no_link = ''
+        no_data_times = 0
         while not final:
-            msg = await self.wss.receive(timeout=120)
+            msg = await self.wss.receive(timeout=60)
             if msg.data is None:
+                no_data_times += 1
+                if no_data_times >= 5:
+                    # 抛出异常重新连接
+                    raise Exception('Cannot write to closing transport')
                 continue
+            if type(msg.data) is int:
+                logger.error('[Response] receive int response, %s, %s, %s', msg, msg.type, msg.data)
+                raise Exception('Unexpected message type: %s' % msg.type)
             objects = msg.data.split(DELIMITER)
             for obj in objects:
                 if not obj:
@@ -470,6 +478,11 @@ class _ChatHub:
                         pass
                     final = True
                     yield True, response
+                elif response.get('type') == 6 or response.get('type') == 3:
+                    logger.info('[Response], receive %s', response)
+                    await self.wss.send_str(_append_identifier({'type': 6}))
+                else:
+                    logger.info('[Response], receive %s', response)
 
     async def _initial_handshake(self) -> None:
         if not self.wss:

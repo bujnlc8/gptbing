@@ -53,22 +53,31 @@ def login(index, user_name, passwd):
     print('[%s] %s login success!' % (datetime.now(), user_name))
 
 
+def should_update(file_path):
+    mtime = os.path.getmtime(file_path)
+    if (time.time() - mtime) > 10 * 3600 * 24:
+        return True
+
+
 if __name__ == '__main__':
-    try:
-        for index in range(len(BING_ACCOUNT_LIST)):
-            login(index, BING_ACCOUNT_LIST[index]['user'], BING_ACCOUNT_LIST[index]['password'])
-        send_mail(
-            MAIL_SENDER,
-            MAIL_SENDER_PASSWD,
-            MAIL_RECEIVER,
-            'Bing Cookie刷新',
-            '成功刷新以下账号的cookie: \n' + '\n'.join([x['user'] for x in BING_ACCOUNT_LIST]),
-        )
-    except Exception as e:
-        send_mail(
-            MAIL_SENDER,
-            MAIL_SENDER_PASSWD,
-            MAIL_RECEIVER,
-            'Bing Cookie刷新',
-            '刷新遇到异常: \n' + traceback.format_exc(),
-        )
+    err = ''
+    success = []
+    for index in range(len(BING_ACCOUNT_LIST)):
+        user = BING_ACCOUNT_LIST[index]['user']
+        try:
+            file_path = '/bing/cookies/cookie{}.json'.format(index)
+            if not should_update(file_path):
+                print('[%s] %s 无需更新' % (datetime.now(), user))
+                continue
+            login(index, user, BING_ACCOUNT_LIST[index]['password'])
+            success.append(user)
+            time.sleep(60)
+        except Exception as e:
+            err += '刷新 {} 遇到异常: \n{}\n'.format(user, traceback.format_exc())
+    msg = ''
+    if success:
+        msg = '成功刷新以下账号的cookie: \n' + '\n'.join(success) + '\n'
+    if err:
+        msg += err
+    if msg:
+        send_mail(MAIL_SENDER, MAIL_SENDER_PASSWD, MAIL_RECEIVER, 'Bing Cookie刷新', msg)
