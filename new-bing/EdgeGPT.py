@@ -87,11 +87,10 @@ class ConversationStyle(Enum):
         'disable_emoji_spoken_text',
         'responsible_ai_policy_235',
         'enablemm',
-        'h3imaginative',
+        'galileo',
         'dv3sugg',
         'autosave',
-        'clgalileo',
-        'gencontentv3',
+        'saharagenconv5',
     ]
     balanced = [
         'nlu_direct_response_filter',
@@ -102,6 +101,7 @@ class ConversationStyle(Enum):
         'galileo',
         'dv3sugg',
         'autosave',
+        'saharagenconv5',
     ]
     precise = [
         'nlu_direct_response_filter',
@@ -174,12 +174,7 @@ class _ChatHubRequest:
         Updates request object
         """
         if options is None:
-            options = [
-                'deepleo',
-                'enable_debug_commands',
-                'disable_emoji_spoken_text',
-                'enablemm',
-            ]
+            options = ConversationStyle.creative.value
         if conversation_style:
             if not isinstance(conversation_style, ConversationStyle):
                 conversation_style = getattr(ConversationStyle, conversation_style)
@@ -424,8 +419,8 @@ class _ChatHub:
             if msg.data is None:
                 no_data_times += 1
                 if no_data_times >= 5:
-                    # 抛出异常重新连接
-                    raise Exception('Cannot write to closing transport')
+                    logger.error('[Response] receive int response, %s, %s, %s', msg, msg.type, msg.data)
+                    raise Exception('Unexpected message type: %s' % msg.type)
                 continue
             if type(msg.data) is int:
                 logger.error('[Response] receive int response, %s, %s, %s', msg, msg.type, msg.data)

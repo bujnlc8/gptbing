@@ -4,6 +4,7 @@ import asyncio
 import json as raw_json
 import os
 import re
+import traceback
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -11,6 +12,7 @@ import openai
 import requests
 import tiktoken
 from BingImageCreator import async_image_gen
+from common import DAY_LIMIT, FORBIDDEN_TIP, INTERNAL_ERROR, NO_ACCESS, OVER_DAY_LIMIT, SERVICE_NOT_AVALIABLE
 from conversation_ctr import conversation_ctr
 from dfa import dfa
 from EdgeGPT import Chatbot, ConversationStyle
@@ -32,7 +34,7 @@ app = Sanic('new-bing')
 app.config.REQUEST_TIMEOUT = 900
 app.config.RESPONSE_TIMEOUT = 900
 app.config.WEBSOCKET_PING_INTERVAL = 10
-app.config.WEBSOCKET_PING_TIMEOUT = 30
+app.config.WEBSOCKET_PING_TIMEOUT = 60
 
 bots = {}
 
@@ -49,8 +51,6 @@ HIDDEN_TEXTS = [
     '嗯……对于这个问题很抱歉',
     'try a different topic.',
 ]
-
-FORBIDDEN_TIP = '💥你的输入包含敏感词，请检查后再试！'
 
 
 def check_hidden(text):
@@ -173,7 +173,7 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
                         'Success', last_not_final_text, [], '', processed_data['data']['num_in_conversation']
                     )
                 else:
-                    raise Exception('系统内部异常，请稍后再试！')
+                    raise Exception(INTERNAL_ERROR)
             # 取消New Bing隐藏敏感内容
             if last_not_final_text and check_hidden(processed_data['data']['text']):
                 processed_data = make_response_data(
@@ -206,6 +206,13 @@ def check_forbidden_words(sid, q):
         return data
 
 
+def check_limit(sid):
+    incr = conversation_ctr.get_day_limit(sid)
+    if show_chatgpt(sid):
+        return False
+    return True if incr > DAY_LIMIT else False
+
+
 @app.websocket('/bing/chat')
 async def ws_chat(_, ws):
     while True:
@@ -221,16 +228,18 @@ async def ws_chat(_, ws):
             q = data['q']
             style = data.get('style', 'creative')
             if check_blocked(sid):
-                raise Exception('无权限使用此服务！')
-            # 发生错误，重试4次
-            try_times = 4
+                raise Exception(NO_ACCESS)
+            if check_limit(sid[-28:]):
+                raise Exception(OVER_DAY_LIMIT)
+            # 发生错误，重试6次
+            try_times = 6
             reconnect = False
             await ask_bing(ws, sid, q, style, reconnect=reconnect)
         except KeyError:
-            msg = 'New Bing服务异常，请稍后再试！'
+            msg = SERVICE_NOT_AVALIABLE
         except Exception as e:
-            logger.error(e)
-            msg = str(e) or 'New Bing服务异常，请稍后再试！'
+            logger.error('%s', traceback.format_exc())
+            msg = str(e) or SERVICE_NOT_AVALIABLE
         if msg:
             if 'Cannot write to closing transport' in msg:
                 reconnect = True
@@ -238,10 +247,12 @@ async def ws_chat(_, ws):
                 await asyncio.sleep(60)
             if 'Your prompt has been blocked by Bing' in msg:
                 try_times = 0
+            if OVER_DAY_LIMIT in msg:
+                try_times = 0
             while try_times and msg:
                 try:
                     try_times -= 1
-                    if '无权限使用此服务' in msg:
+                    if NO_ACCESS in msg:
                         break
                     msg = ''
                     await ask_bing(
@@ -253,14 +264,16 @@ async def ws_chat(_, ws):
                     )
                     reconnect = False
                 except KeyError:
-                    msg = 'New Bing服务异常，请稍后再试！'
+                    msg = SERVICE_NOT_AVALIABLE
                 except Exception as e:
-                    logger.error(e)
-                    msg = str(e) or 'New Bing服务异常，请稍后再试！'
+                    logger.error('%s', traceback.format_exc())
+                    msg = str(e) or SERVICE_NOT_AVALIABLE
                 if 'Cannot write to closing transport' in msg:
                     reconnect = True
                     # 等待上一个回答完成
                     await asyncio.sleep(60)
+                if 'Your prompt has been blocked by Bing' in msg:
+                    try_times = 0
             if msg:
                 reconnect = False
                 await ws.send(raw_json.dumps({
@@ -268,7 +281,7 @@ async def ws_chat(_, ws):
                     'data': make_response_data('Error', msg, [q], msg)
                 }))
                 send_mail(sid, q + '\n' + msg)
-                if '无权限使用此服务' in msg:
+                if NO_ACCESS in msg:
                     break
                 msg = ''
 
@@ -342,8 +355,10 @@ async def chat(request):
     q = request.json.get('q', '')
     if check_blocked(request.json.get('sid')) or 'servicewechat.com/wxee7496be5b68b740' not in request.headers.get(
             'referer', ''):
-        raise Exception('无权限使用此服务')
+        raise Exception(NO_ACCESS)
     sid = request.json.get('sid')
+    if check_limit(sid[-28:]):
+        raise Exception(OVER_DAY_LIMIT)
     forbid_data = check_forbidden_words(sid, q)
     if forbid_data:
         return json(forbid_data)
@@ -427,7 +442,7 @@ async def ws_openai_chat(_, ws):
             logger.info('[openai] Websocket receive data: %s', data)
             sid = data['sid']
             if not show_chatgpt(sid):
-                raise Exception('无权限使用此服务')
+                raise Exception(NO_ACCESS)
             q = data['q']
             resp = await generate_image(q, sid)
             if resp:
@@ -479,7 +494,7 @@ async def ws_openai_chat(_, ws):
                         })
                     )
         except Exception as e:
-            logger.error(e)
+            logger.error('%s', traceback.format_exc())
             send_mail(sid, q + '\n' + str(e))
             await ws.send(raw_json.dumps({
                 'final': True,
@@ -494,7 +509,7 @@ async def openai_chat(request):
         logger.info('[openai] Http request payload: %s', request.json)
         sid = request.json.get('sid')
         if not show_chatgpt(sid):
-            raise Exception('无权限使用此服务')
+            raise Exception(NO_ACCESS)
         q = request.json.get('q')
         resp = await generate_image(q, sid)
         if resp:
@@ -530,7 +545,7 @@ async def openai_chat(request):
                 })
                 return json(make_response_data('Success', ''.join(chunks), [], ''))
     except Exception as e:
-        logger.error(e)
+        logger.error('%s', traceback.print_exc())
         send_mail(sid, q + '\n' + str(e))
         return json(make_response_data('Error', str(e), [], str(e)))
 
@@ -544,7 +559,7 @@ async def last_sync_time(request):
 async def save(request):
     if check_blocked(request.json.get('sid')) or 'servicewechat.com/wxee7496be5b68b740' not in request.headers.get(
             'referer', ''):
-        raise Exception('无权限使用此服务')
+        raise Exception(NO_ACCESS)
     conversation_ctr.save(request.json.get('sid'), request.json.get('conversations'))
     return json({'saved': show_chatgpt(request.json.get('sid'))})
 

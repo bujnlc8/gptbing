@@ -1,12 +1,12 @@
 import asyncio
 import json
 import os
-
 import random
 
 import aiohttp
 import regex
 import requests
+from common import SERVICE_NOT_AVALIABLE
 from logger import logger
 
 BING_URL = os.environ.get('BING_URL', 'https://www.bing.com')
@@ -68,7 +68,7 @@ class ImageGenAsync:
                 ) as response3:
                     if response3.status != 302:
                         logger.error('url: %s, status: %s, response: %s', url, response3.status, response3.text)
-                        raise Exception('画图服务不可用，请稍后再试！')
+                        raise Exception(SERVICE_NOT_AVALIABLE)
                     response = response3
         # Get redirect URL
         redirect_url = response.headers['Location'].replace('&nfy=1', '')
@@ -80,7 +80,7 @@ class ImageGenAsync:
             # By default, timeout is 300s, change as needed
             response = await self.session.get(polling_url)
             if response.status != 200:
-                raise Exception('Could not get results')
+                raise Exception(SERVICE_NOT_AVALIABLE)
             content = await response.text()
             if content and content.find('errorMessage') == -1:
                 break
