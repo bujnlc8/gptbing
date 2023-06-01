@@ -1,6 +1,5 @@
 # coding=utf-8
-
-DAY_LIMIT = 60
+DAY_LIMIT = 100
 NO_ACCESS = '暂时无法为你提供服务！'
 SERVICE_NOT_AVALIABLE = '当前New Bing服务不可用！'
 FORBIDDEN_TIP = '💥你的输入包含敏感词，请检查后再试！'

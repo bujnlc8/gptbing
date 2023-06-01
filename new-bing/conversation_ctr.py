@@ -104,7 +104,7 @@ class ConversationCtr:
         return self.redis_client.incr(key)
 
     def get_day_limit(self, sid):
-        key = self.DAY_LIMIT % (sid, datetime.datetime.now().strftime('%Y%m%d'))
+        key = self.DAY_LIMIT % (datetime.datetime.now().strftime('%Y%m%d'), sid)
         return self.redis_client.incr(key)
 
 

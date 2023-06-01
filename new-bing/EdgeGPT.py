@@ -87,10 +87,11 @@ class ConversationStyle(Enum):
         'disable_emoji_spoken_text',
         'responsible_ai_policy_235',
         'enablemm',
-        'galileo',
+        'h3imaginative',
         'dv3sugg',
         'autosave',
-        'saharagenconv5',
+        'clgalileo',
+        'gencontentv3',
     ]
     balanced = [
         'nlu_direct_response_filter',
