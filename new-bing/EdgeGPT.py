@@ -7,7 +7,6 @@ import json
 import os
 import random
 import ssl
-import sys
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -466,17 +465,16 @@ class _ChatHub:
                         if (response['item']['messages'][-1]['contentOrigin'] == 'Apology' and resp_txt):
                             response['item']['messages'][-1]['text'] = resp_txt_no_link
                             response['item']['messages'][-1]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
-                            print(
-                                'Preserved the message from being deleted',
-                                file=sys.stderr,
-                            )
                     except KeyError:
                         pass
                     final = True
                     yield True, response
                 elif response.get('type') == 6 or response.get('type') == 3:
-                    logger.info('[Response], receive %s', response)
-                    await self.wss.send_str(_append_identifier({'type': 6}))
+                    try:
+                        logger.info('[Response], receive %s', response)
+                        await self.wss.send_str(_append_identifier({'type': 6}))
+                    except Exception:
+                        logger.error('[Response], send response to bing error occor', exc_info=True)
                 else:
                     logger.info('[Response], receive %s', response)
 

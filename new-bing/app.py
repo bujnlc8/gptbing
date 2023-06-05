@@ -87,14 +87,14 @@ def get_bot(sid, cookie_path=None):
     bot = Chatbot(cookie_path=cookie_path)
     bots[sid] = {
         'bot': bot,
-        'expired': datetime.now() + timedelta(hours=5, minutes=55),  # 会话有效期为6小时
+        'expired': datetime.now() + timedelta(days=89, hours=23, minutes=55),  # 会话有效期为90天
     }
     return bot
 
 
 async def reset_conversation(sid, reset=False):
     await get_bot(sid, cookie_path=get_cookie_file(sid, COOKIE_FILES, reset=reset)).reset()
-    bots[sid]['expired'] = datetime.now() + timedelta(hours=5, minutes=55)
+    bots[sid]['expired'] = datetime.now() + timedelta(days=89, hours=23, minutes=55)  # 会话有效期为90天
 
 
 def show_chatgpt(sid):
@@ -245,6 +245,8 @@ async def ws_chat(_, ws):
                 reconnect = True
                 # 等待上一个回答完成
                 await asyncio.sleep(60)
+            if 'Connector is closed' in msg or 'Concurrent call to receive() is not allowed' in msg:
+                try_times = 0
             if 'Your prompt has been blocked by Bing' in msg:
                 try_times = 0
             if OVER_DAY_LIMIT in msg:
@@ -272,6 +274,8 @@ async def ws_chat(_, ws):
                     reconnect = True
                     # 等待上一个回答完成
                     await asyncio.sleep(60)
+                if 'Connector is closed' in msg or 'Concurrent call to receive() is not allowed' in msg:
+                    try_times = 0
                 if 'Your prompt has been blocked by Bing' in msg:
                     try_times = 0
             if msg:
