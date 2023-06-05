@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import openai
 import requests
 import tiktoken
+import pickle
 from BingImageCreator import async_image_gen
 from common import DAY_LIMIT, FORBIDDEN_TIP, INTERNAL_ERROR, NO_ACCESS, OVER_DAY_LIMIT, SERVICE_NOT_AVALIABLE
 from conversation_ctr import conversation_ctr
@@ -84,7 +85,16 @@ def get_bot(sid, cookie_path=None):
             return bot
     cookie_path = cookie_path or get_cookie_file(sid, COOKIE_FILES)
     logger.info('[BotCookie] sid: %s, cookie_path: %s', sid, cookie_path)
-    bot = Chatbot(cookie_path=cookie_path)
+    try:
+        # 尝试恢复会话
+        file = '/sanic/sessions/{}'.format(sid)
+        with open(file, 'rb') as f:
+            bot = Chatbot(cookie_path=cookie_path, request=pickle.load(f))
+        os.remove(file)
+        logger.info('Reload %s session success.', sid)
+    except Exception:
+        logger.error('Reload %s session error.', sid, exc_info=True)
+        bot = Chatbot(cookie_path=cookie_path)
     bots[sid] = {
         'bot': bot,
         'expired': datetime.now() + timedelta(days=89, hours=23, minutes=55),  # 会话有效期为90天
@@ -151,6 +161,7 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
             'data': make_response_data('Success', resp, [], '')
         }))
         return
+    index = 0
     async for response in get_bot(sid).ask_stream(
             q,
             conversation_style=ConversationStyle[style],
@@ -163,7 +174,8 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
                 await reset_conversation(sid, reset=True)
                 processed_data['data']['suggests'].append(q)
             if processed_data['data']['status'] == 'ProcessingMessage':
-                await reset_conversation(sid)
+                #  await reset_conversation(sid)
+                await asyncio.sleep(60)
                 raise Exception(
                     'The last message is being processed. Please wait for a while before submitting further messages.'
                 )
@@ -186,10 +198,12 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
         else:
             if res and not check_hidden(res):
                 last_not_final_text = res
-                await ws.send(raw_json.dumps({
-                    'final': final,
-                    'data': res
-                }))
+                if index % 2 == 0:
+                    await ws.send(raw_json.dumps({
+                        'final': final,
+                        'data': res
+                    }))
+                index += 1
 
 
 def check_forbidden_words(sid, q):
@@ -231,8 +245,8 @@ async def ws_chat(_, ws):
                 raise Exception(NO_ACCESS)
             if check_limit(sid[-28:]):
                 raise Exception(OVER_DAY_LIMIT)
-            # 发生错误，重试6次
-            try_times = 6
+            # 发生错误，重试10次
+            try_times = 10
             reconnect = False
             await ask_bing(ws, sid, q, style, reconnect=reconnect)
         except KeyError:
@@ -245,8 +259,10 @@ async def ws_chat(_, ws):
                 reconnect = True
                 # 等待上一个回答完成
                 await asyncio.sleep(60)
-            if 'Connector is closed' in msg or 'Concurrent call to receive() is not allowed' in msg:
-                try_times = 0
+            if 'Concurrent call to receive() is not allowed' in msg:
+                await asyncio.sleep(60)
+            if 'Connector is closed' in msg or 'The last message is being processed' in msg:
+                reconnect = True
             if 'Your prompt has been blocked by Bing' in msg:
                 try_times = 0
             if OVER_DAY_LIMIT in msg:
@@ -274,8 +290,10 @@ async def ws_chat(_, ws):
                     reconnect = True
                     # 等待上一个回答完成
                     await asyncio.sleep(60)
-                if 'Connector is closed' in msg or 'Concurrent call to receive() is not allowed' in msg:
-                    try_times = 0
+                if 'Concurrent call to receive() is not allowed' in msg:
+                    await asyncio.sleep(60)
+                if 'Connector is closed' in msg or 'The last message is being processed' in msg:
+                    reconnect = True
                 if 'Your prompt has been blocked by Bing' in msg:
                     try_times = 0
             if msg:
@@ -602,6 +620,18 @@ async def collect_query(request):
         request.args.get('sid'), int(request.args.get('page', '1')), int(request.args.get('size', '10'))
     )
     return json({'data': data})
+
+
+@app.after_server_stop
+def after_server_stop(*_):
+    logger.info('Save sessions...')
+    for sid, bot in bots.items():
+        try:
+            with open('/sanic/sessions/{}'.format(sid), 'wb') as f:
+                pickle.dump(bot['bot'].chat_hub.request, f)
+            logger.info('Save %s session success.', sid)
+        except:
+            logger.error('Save %s session error.', sid, exc_info=True)
 
 
 if __name__ == '__main__':

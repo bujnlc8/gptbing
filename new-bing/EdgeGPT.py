@@ -340,7 +340,7 @@ class _ChatHub:
     Chat API
     """
 
-    def __init__(self, conversation: _Conversation) -> None:
+    def __init__(self, conversation: _Conversation = None, request: _ChatHubRequest = None) -> None:
         self.session: aiohttp.ClientSession | None = None
         self.wss: aiohttp.ClientWebSocketResponse | None = None
         self.request: _ChatHubRequest
@@ -350,7 +350,7 @@ class _ChatHub:
             conversation_signature=conversation.struct['conversationSignature'],
             client_id=conversation.struct['clientId'],
             conversation_id=conversation.struct['conversationId'],
-        )
+        ) if not request else request
 
     async def ask_stream(
         self,
@@ -505,10 +505,14 @@ class Chatbot:
     def __init__(
         self,
         cookie_path: str = '',
+        request: _ChatHubRequest = None,
     ) -> None:
         self.cookie_path = cookie_path
         self.load_cookie()
-        self.chat_hub: _ChatHub = _ChatHub(_Conversation(self.cookies))
+        if not request:
+            self.chat_hub: _ChatHub = _ChatHub(_Conversation(self.cookies))
+        else:
+            self.chat_hub: _ChatHub = _ChatHub(request=request)
 
     @staticmethod
     async def create():
