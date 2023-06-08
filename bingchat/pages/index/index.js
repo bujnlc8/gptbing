@@ -292,18 +292,43 @@ Page({
 		})
 	},
 	submitContent: function (content) {
-		if (this.data.searching) {
+		var that = this
+		if (that.data.searching) {
 			wx.showToast({
 				title: "请等待完成",
 				icon: "error"
 			})
 			return
 		} else {
-			this.setData({
+			that.setData({
 				searching: true
 			})
 		}
-		var that = this
+		if (content.startsWith("memos_openapi#")) {
+			var url = content.split("#")[1]
+			if (!url || !url.startsWith("http")) {
+				wx.showToast({
+					title: "格式错误",
+					icon: "none",
+				})
+			} else {
+				wx.setStorage({
+					key: "memos_openapi",
+					data: url,
+					success: (res) => {
+						wx.showToast({
+							title: "设置成功",
+							icon: "none",
+						})
+					}
+				})
+			}
+			that.setData({
+				content: "",
+				searching: false
+			})
+			return
+		}
 		var cht = this.selectComponent("#chat-id")
 		that.pushStorageMessage(cht, content, "man", [], false)
 		that.setData({
@@ -356,7 +381,7 @@ Page({
 		if (final) {
 			app.upload_conversation(cht.data.chatList.slice(cht.data.chatList.length - 3))
 		}
-		if(autoIncrConversation % 2 == 0){
+		if (autoIncrConversation % 2 == 0) {
 			setTimeout(() => {
 				cht.setData({
 					scrollId: "item" + (autoIncrConversation + "9999"),
@@ -396,8 +421,8 @@ Page({
 	},
 	onShareTimeline: function () {
 		return {
-			title: 'New Bing Bot，聊你想聊！',
-			imageUrl: "../../image/newBing.png",
+			title: "New Bing Bot，聊你想聊！",
+			imageUrl: "../../image/pyq.png",
 			query: "chatType=bing&from=friend"
 		}
 	},
@@ -631,51 +656,125 @@ Page({
 			},
 		})
 	},
+	chooseChatStyle: function () {
+		var that = this
+		var items = ["更多创造力", "更多平衡", "更多精确"]
+		items.forEach((v, k) => {
+			if (that.data.chatStyle == chatStyleList[k]) {
+				items[k] += "(已选)"
+			}
+		})
+		wx.showActionSheet({
+			title: "选择对话模式",
+			itemList: items,
+			success(res) {
+				wx.showToast({
+					title: ("已选择“" + items[res.tapIndex] + "”").replace("(已选)", ""),
+					icon: "none"
+				})
+				var chatStyle = chatStyleList[res.tapIndex]
+				if (that.data.chatStyle != chatStyle) {
+					that.resetConversation()
+					that.setData({
+						chatStyle: chatStyle
+					})
+					wx.setStorage({
+						key: "chatStyle",
+						data: chatStyle,
+					})
+				}
+			}
+		})
+	},
 	longPress: function (e) {
 		var that = this
 		var cht = this.selectComponent("#chat-id")
-		var itemList = ["显示帮助", "跳转到收藏", "选择对话模式", "删除聊天记录", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享"]
+		var itemList = ["设置 🔨 ", "显示帮助", "跳转收藏", "删除聊天"]
 		if ((app.globalData["saved"] && app.globalData["saved"] == 1) || that.data.chatType == "chatgpt") {
-			itemList = ["显示帮助", "跳转到收藏", "选择对话模式", "删除聊天记录", cht.data.closeShareOnCopy ? "打开复制后分享" : "关闭复制后分享", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
+			itemList = ["设置 🔨 ", "显示帮助", "跳转收藏", "删除聊天", that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing"]
 		}
 		wx.showActionSheet({
 			itemList: itemList,
 			success(res) {
 				if (res.tapIndex == 0) {
-					that.setData({
-						showHelpTip: true
-					})
-				} else if (res.tapIndex == 1) {
-					wx.navigateTo({
-						url: "/pages/collected/collected",
-					})
-				} else if (res.tapIndex == 2) {
-					var items = ["更多创造力", "更多平衡", "更多精确"]
-					items.forEach((v, k) => {
-						if (that.data.chatStyle == chatStyleList[k]) {
-							items[k] += "(已选)"
-						}
-					})
 					wx.showActionSheet({
-						title: "选择对话模式",
-						itemList: items,
-						success(res) {
-							wx.showToast({
-								title: ("已选择“" + items[res.tapIndex] + "”").replace('(已选)', ''),
-								icon: "none"
-							})
-							var chatStyle = chatStyleList[res.tapIndex]
-							if (that.data.chatStyle != chatStyle) {
-								that.resetConversation()
-								that.setData({
-									chatStyle: chatStyle
-								})
-								wx.setStorage({
-									key: "chatStyle",
-									data: chatStyle,
+						itemList: ["选择对话模式", cht.data.closeShareOnCopy ? "打开复制问题后分享" : "关闭复制问题后分享", "Memos OpenAPI 地址"],
+						success: function (res) {
+							if (res.tapIndex == 0) {
+								that.chooseChatStyle()
+							} else if (res.tapIndex == 1) {
+								if (cht.data.closeShareOnCopy) {
+									cht.setData({
+										closeShareOnCopy: false,
+									})
+									wx.showToast({
+										title: "已打开复制后分享",
+										icon: "none"
+									})
+									wx.removeStorage({
+										key: "closeShareOnCopy",
+									})
+								} else {
+									cht.setData({
+										closeShareOnCopy: true,
+									})
+									wx.showToast({
+										title: "已关闭复制后分享",
+										icon: "none"
+									})
+									wx.setStorage({
+										key: "closeShareOnCopy",
+										data: 1,
+									})
+								}
+							} else if (res.tapIndex == 2) {
+								var oldUrl = wx.getStorageSync("memos_openapi")
+								if (!oldUrl) {
+									if (systemInfo.platform != "ios" && systemInfo.platform != "android") {
+										oldUrl = "抱歉，电脑版不支持在此输入，请将OpenApI地址以下面的格式发送到聊天来完成设置:\nmemos_openapi#http... 注意，将#后面的部分替换成真实地址，一般以http开头。"
+									}
+								}
+								wx.showModal({
+									title: "请输入Memos的OpenAPI地址",
+									placeholderText: "https://...",
+									content: oldUrl,
+									editable: true,
+									success(res) {
+										if (res.confirm) {
+											var i = res.content
+											if (i.startsWith("抱歉，电脑版不支持")) {
+												return
+											}
+											if (!i || !i.startsWith("http")) {
+												wx.showToast({
+													title: "格式错误",
+													icon: "none",
+												})
+											} else {
+												wx.setStorage({
+													key: "memos_openapi",
+													data: i,
+													success: (res) => {
+														wx.showToast({
+															title: "设置成功",
+															icon: "none",
+														})
+													}
+												})
+											}
+										}
+									}
 								})
 							}
 						}
+					})
+				} else if (res.tapIndex == 1) {
+					that.setData({
+						showHelpTip: true
+					})
+				} else if (res.tapIndex == 2) {
+					wx.navigateTo({
+						url: "/pages/collected/collected",
 					})
 				} else if (res.tapIndex == 3) {
 					wx.showActionSheet({
@@ -704,31 +803,6 @@ Page({
 				} else if (res.tapIndex == 10) {
 					//that.switchRequestMethod()
 				} else if (res.tapIndex == 4) {
-					if (cht.data.closeShareOnCopy) {
-						cht.setData({
-							closeShareOnCopy: false,
-						})
-						wx.showToast({
-							title: "已打开复制后分享",
-							icon: "none"
-						})
-						wx.removeStorage({
-							key: "closeShareOnCopy",
-						})
-					} else {
-						cht.setData({
-							closeShareOnCopy: true,
-						})
-						wx.showToast({
-							title: "已关闭复制后分享",
-							icon: "none"
-						})
-						wx.setStorage({
-							key: "closeShareOnCopy",
-							data: 1,
-						})
-					}
-				} else if (res.tapIndex == 5) {
 					if (that.data.chatType == "chatgpt") {
 						wx.removeStorage({
 							key: "usechatgpt",
@@ -765,15 +839,24 @@ Page({
 	closeHelpTip: function () {
 		var that = this
 		wx.setStorage({
-			key: 'closeHelpTip',
+			key: "closeHelpTip",
 			data: 1,
 			success: (res) => {
 				that.setData({
 					showHelpTip: false
 				})
-				wx.showToast({
-					title: '可在弹出菜单中打开',
-					icon: 'none'
+				wx.getStorage({
+					key: "showHelpTipTip",
+					fail: ()=>{
+						wx.showToast({
+							title: "可在弹出菜单中打开",
+							icon: "none"
+						})
+						wx.setStorage({
+							key: "showHelpTipTip",
+							data: 1,
+						})
+					}
 				})
 			}
 		})

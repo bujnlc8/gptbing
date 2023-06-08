@@ -12,7 +12,7 @@
 3.mkdir cookies && mv cookie0.json cookies # 通过COOKIE_FILES环境变量可以支持n个账号的自动切换，目前微软对每个账号每天的聊天限制是200条
 4.cp env.example env  # 根据实际情况修改
 5.bash start.sh 0.0.3
-6.curl -X POST 'http://127.0.0.1:8000/bing/chat' -H 'content-type: application/json' --data '{"q":"你是谁?","t":1,"sid":"1"}' # 验证是否成功
+6.curl -X POST 'http://127.0.0.1:8000/bing/chat' -H 'content-type: application/json' -H 'Referer: servicewechat.com/wxee7496be5b68b740' --data '{"q":"你是谁?","t":1,"sid":"1"}' # 验证是否成功
 ```
 
 ## 说明

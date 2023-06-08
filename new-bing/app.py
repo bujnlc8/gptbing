@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 import openai
+import aiohttp
 import requests
 import tiktoken
 import pickle
@@ -366,6 +367,10 @@ async def process_data(res, q, sid, auto_reset=None):
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
     if auto_reset and ('New topic' in text or 'has expired' in msg):
         await reset_conversation(sid)
+        status = 'Success'
+        text = 'Thanks for this conversation! But I\'ve reached my limit. 现已开启新一轮对话。'
+        if q not in suggests:
+            suggests.append(q)
     return make_response_data(
         status, text, suggests, msg,
         res['item']['throttling']['numUserMessagesInConversation'] if 'throttling' in res['item'] else -1
@@ -423,6 +428,18 @@ def get_temperature(style):
     return 0.2
 
 
+def get_history_conversation(sid):
+    try:
+        file = '/sanic/sessions/{}.openai'.format(sid)
+        with open(file, 'rb') as f:
+            OPENAI_CONVERSATION[sid] = pickle.load(f)
+            logger.info('Reload %s openai session', sid)
+            os.remove(file)
+    except:
+        pass
+    return OPENAI_CONVERSATION[sid][-20:]
+
+
 def num_tokens_from_messages(messages, model='gpt-3.5-turbo'):
     """Returns the number of tokens used by a list of messages."""
     try:
@@ -475,7 +492,7 @@ async def ws_openai_chat(_, ws):
                 continue
             style = data.get('style', 'creative')
             # 保存20个对话
-            history_conversation = OPENAI_CONVERSATION[sid][-20:]
+            history_conversation = get_history_conversation(sid)
             history_conversation.insert(0, OPENAI_DEFAULT_PROMPT)
             history_conversation.append({
                 'role': 'user',
@@ -537,7 +554,7 @@ async def openai_chat(request):
         if resp:
             return json(make_response_data('Success', resp, [], ''))
         style = request.json.get('style', 'balanced')
-        history_conversation = OPENAI_CONVERSATION[sid][-20:]
+        history_conversation = get_history_conversation(sid)
         history_conversation.insert(0, OPENAI_DEFAULT_PROMPT)
         history_conversation.append({
             'role': 'user',
@@ -622,6 +639,19 @@ async def collect_query(request):
     return json({'data': data})
 
 
+@app.post('/bing/share')
+async def share(request):
+    sid = request.json.get('sid')
+    url = request.json.get('url')
+    content = request.json.get('content')
+    logger.info('[Memos] %s send %s to %s', sid, content, url)
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json={'content': '#NewBing\n' + content}) as resp:
+            if resp.status == 200:
+                return json({'sent': 1})
+    return json({'sent': 0})
+
+
 @app.after_server_stop
 def after_server_stop(*_):
     logger.info('Save sessions...')
@@ -632,6 +662,13 @@ def after_server_stop(*_):
             logger.info('Save %s session success.', sid)
         except:
             logger.error('Save %s session error.', sid, exc_info=True)
+    for sid, conversations in OPENAI_CONVERSATION.items():
+        try:
+            with open('/sanic/sessions/{}.openai'.format(sid), 'wb') as f:
+                pickle.dump(conversations, f)
+            logger.info('Save %s openai session success.', sid)
+        except:
+            logger.error('Save %s openai session error.', sid, exc_info=True)
 
 
 if __name__ == '__main__':

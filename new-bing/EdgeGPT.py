@@ -128,7 +128,7 @@ def _append_identifier(msg: dict) -> str:
     return json.dumps(msg, ensure_ascii=False) + DELIMITER
 
 
-def _get_ran_hex(length: int = 32) -> str:
+def get_ran_hex(length: int = 32) -> str:
     """
     Returns random hex string
     """
@@ -191,26 +191,23 @@ class _ChatHubRequest:
                         'Disengaged',
                     ],
                     'sliceIds': [],
-                    'traceId': _get_ran_hex(32),
+                    'traceId': get_ran_hex(32),
                     'isStartOfSession': self.invocation_id == 0,
                     'tone': conversation_style.name.capitalize() if conversation_style else '',
                     'message': {
                         'locale': 'zh-CN',
                         'market': 'zh-CN',
-                        'region': 'US',
+                        'region': 'WW',
                         'location': 'lat:47.639557;long:-122.128159;re=1000m;',
                         'locationHints': [{
-                            'country': 'United States',
-                            'state': 'California',
-                            'city': 'Los Angeles',
-                            'zipcode': '90014',
-                            'timezoneoffset': -8,
-                            'dma': 803,
+                            'country': 'Singapore',
+                            'state': 'Central Singapore',
+                            'city': 'Singapore',
+                            'timezoneoffset': 8,
                             'countryConfidence': 8,
-                            'cityConfidence': 5,
                             'Center': {
-                                'Latitude': 34.0448,
-                                'Longitude': -118.2527
+                                'Latitude': 1.2894,
+                                'Longitude': 103.85
                             },
                             'RegionType': 2,
                             'SourceType': 1

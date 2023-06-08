@@ -25,7 +25,7 @@ Page({
    */
   onShow() {
     wx.setNavigationBarTitle({
-      title: '收藏',
+      title: '收藏 ❤️',
     })
     var cht = this.selectComponent("#collected-id")
     setTimeout(() => {

@@ -8,10 +8,12 @@
 	<view class="tipTitle">使用帮助</view>
 	<view class="tipItem">1、输入问题，点击发送按钮开始聊天；</view>
 	<view class="tipItem">2、长按空白处可弹出更多菜单，包括跳转到收藏页面、选择对话模式等；</view>
-	<view class="tipItem">3、长按对话框可对内容进行复制；</view>
+	<view class="tipItem">3、长按对话框可对内容进行复制或发送至Memos；</view>
 	<view class="tipItem">4、长按头像可删除该条聊天；</view>
 	<view class="tipItem">5、点击头像可切换渲染(有些渲染出来的效果可能不佳)；</view>
-	<view class="tipItem">6、点击对话框右上方的点可进行收藏操作；</view>
-	<view class="tipItem">7、使用过程中有任何的建议或意见欢迎到客服处反馈😊</view>
+	<view class="tipItem">6、点击对话框右上方的圆点可进行收藏操作；</view>
+	<view class="tipItem">7、发送“重新对话！”可开启新一轮对话；</view>
+	<view class="tipItem">8、New Bing响应较慢，请耐心等待，在聊天过程中最好不要切出小程序；</view>
+	<view class="tipItem">9、使用过程中有任何的建议或意见欢迎到客服处反馈😊</view>
 	<view class="tipBtn" catchtap="closeHelpTip"><text class="tipBtnText">知道了</text></view>
 </view>
