@@ -7,28 +7,26 @@ Component({
     message: String,
     openType: {
       type: String,
-      value: ""
+      value: "",
     },
     title: {
       type: String,
-      value: "提示"
+      value: "提示",
     },
     cancelText: {
       type: String,
-      value: "取消"
+      value: "取消",
     },
     confirmText: {
       type: String,
-      value: "确定"
-    }
+      value: "确定",
+    },
   },
 
   /**
    * 组件的初始数据
    */
-  data: {
-
-  },
+  data: {},
 
   /**
    * 组件的方法列表
@@ -36,10 +34,12 @@ Component({
   methods: {
     closePop: function (e) {
       this.triggerEvent(
-        "PopButtonClick", {
+        "PopButtonClick",
+        {
           t: e.currentTarget.dataset.t,
-        }, {}
-      )
+        },
+        {}
+      );
     },
-  }
-})
+  },
+});

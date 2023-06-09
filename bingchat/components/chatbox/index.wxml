@@ -1,5 +1,7 @@
 <wxs src="../../tools.wxs" module="tools" />
-<view wx:if="{{chatList.length == 0}}" style="text-align:center;color: #b4bbc4;font-size: 16px;"><tex wx:if="{{mode == 'normal'}}">输入问题开始和{{chatType == "bing" ? "New Bing" : "ChatGPT"}}聊天吧~</tex> <text wx:else="">暂无收藏~</text> </view>
+<view wx:if="{{chatList.length == 0}}" style="text-align:center;color: #b4bbc4;font-size: 16px;">
+	<tex wx:if="{{mode == 'normal'}}">输入问题开始和{{chatType == "bing" ? "New Bing" : "ChatGPT"}}聊天吧~</tex> <text wx:else="">暂无收藏~</text>
+</view>
 <scroll-view class="chat" scroll-y="{{true}}" scroll-into-view="{{scrollId}}" style="height:{{height}}px;" enable-back-to-top="{{true}}" scroll-anchoring="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}" enable-flex="{{true}}" bindrefresherrefresh="bindscrolltoupper" scroll-with-animation="{{true}}" refresher-enabled="{{ systemInfo.platform == 'ios' || systemInfo.platform == 'android'}}" refresher-triggered="{{loadingData}}" refresher-threshold="40" bindscrolltoupper="{{!(systemInfo.platform == 'ios' || systemInfo.platform == 'android') ? 'bindscrolltoupper': ''}}">
 	<view wx:for="{{chatList}}" wx:key="index" wx:for-item="item" id="{{'item'+index}}">
 		<view class="chat-item left" wx:if="{{item.type != 'man'}}" id="msg-{{index}}">

@@ -73,11 +73,11 @@
 
 @keyframes blink {
   from {
-    display: 1.0;
+    display: 1;
   }
 
   to {
-    opacity: 0.0;
+    opacity: 0;
   }
 }
 
@@ -106,6 +106,6 @@
 }
 
 .conversation_num_collected {
-	background-color: #fc8c23 !important;
-	color: white;
+  background-color: #fc8c23 !important;
+  color: white;
 }
