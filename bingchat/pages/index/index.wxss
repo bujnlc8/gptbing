@@ -9,21 +9,23 @@ button::after {
 }
 
 .helpTip {
-  width: 80%;
-  max-height: 64%;
-  background-color: #d1dbfa;
+  width: 90%;
+  max-height: 80%;
+  background-color: #e9d7df;
   position: fixed;
-  top: 12%;
-  left: 10%;
+  top: 12px;
+  left: 5%;
+  border: 1.5px dashed #161823;
   border-radius: 10px;
   overflow-y: scroll;
-  padding-bottom: 30px;
+  padding-bottom: 20px;
   z-index: 1000000;
+  line-height: 1.5em;
+  color: #161823;
 }
 
 .tipItem {
   padding: 8px 12px 8px 12px;
-  color: #123bb6;
 }
 
 .tipBtn {
@@ -39,7 +41,7 @@ button::after {
 .tipTitle {
   text-align: center;
   padding-top: 8px;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
 }
 
@@ -51,4 +53,25 @@ button::after {
 
 .tipBtnText:hover {
   font-weight: bold;
+}
+.topTip {
+  width: 100%;
+  padding: 6px;
+  position: fixed;
+  top: 0;
+  background-color: #e9d7df;
+  z-index: 10000;
+}
+.tipText {
+  position: relative;
+  animation: scroll 6s infinite linear;
+  color: #161823;
+}
+@keyframes scroll {
+  0% {
+    left: 100%;
+  }
+  100% {
+    left: -100%;
+  }
 }

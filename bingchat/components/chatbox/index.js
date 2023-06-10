@@ -189,7 +189,7 @@ Component({
       var index = e.currentTarget.dataset.index;
       var data = this.data.chatList;
       wx.showModal({
-        content: "是否删除该条聊天？",
+        content: "是否清除该条聊天？",
         complete: (res) => {
           if (res.confirm) {
             var deleteData = data[index];
@@ -215,6 +215,17 @@ Component({
               });
             });
           }
+        },
+      });
+    },
+    copyRenderedContentToClipBoard: function (index) {
+      var ctx = this.selectComponent("#mp_html_" + index);
+      wx.setClipboardData({
+        data: ctx.getText(),
+        success: function () {
+          wx.showToast({
+            title: "复制成功",
+          });
         },
       });
     },
@@ -251,23 +262,31 @@ Component({
       var index = e.currentTarget.dataset.index;
       var content = this.data.chatList[index].originContent;
       var that = this;
+      var items = ["复制内容", "发送至Flomo", "发送至Memos"];
+      if (that.data.chatList[index]["type"] != "man") {
+        items.push("Copy as plain text");
+      }
       wx.showActionSheet({
-        itemList: ["复制内容", "发送至Memos"],
+        itemList: items,
         success: function (res) {
           if (res.tapIndex == 0) {
             that.copyContentToClipBoard(content, index);
-          } else if (res.tapIndex == 1) {
+          } else if (res.tapIndex == 1 || res.tapIndex == 2) {
+            var app_type = 0;
+            if (res.tapIndex == 1) {
+              app_type = 1;
+            }
             wx.getStorage({
-              key: "memos_openapi",
+              key: app_type == 0 ? "memos_openapi" : "flomo_api",
               success: function (res) {
                 app.getSid((sid) => {
                   doRequest("/share", "POST", {
                     url: res.data,
                     content: content,
                     sid: sid,
+                    app_type: app_type,
                   })
                     .then((res) => {
-                      console.log(res);
                       if (res.data.sent == 1) {
                         wx.showToast({
                           title: "发送成功",
@@ -290,11 +309,13 @@ Component({
               },
               fail: function (e) {
                 wx.showToast({
-                  title: "请先设置Memos的OpenAPI地址",
+                  title: "请先设置API地址",
                   icon: "none",
                 });
               },
             });
+          } else if (res.tapIndex == 3) {
+            that.copyRenderedContentToClipBoard(index);
           }
         },
       });
@@ -357,6 +378,10 @@ Component({
       if (e.detail.t !== "confirm") {
         wx.removeStorage({
           key: "shareContent",
+        });
+        wx.showToast({
+          title: "可在设置中关闭分享",
+          icon: "none",
         });
       }
       this.setData({

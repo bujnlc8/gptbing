@@ -60,7 +60,6 @@ App({
             })
               .then((data) => {
                 if (data.statusCode != 200) {
-                  console.log(data);
                   callback("");
                   return;
                 }

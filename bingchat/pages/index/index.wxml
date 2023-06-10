@@ -1,4 +1,5 @@
-<chat-box id="chat-id" bindsuggestSubmit="onSuggestSubmit" bindcancelReceive="onCancelReceive" bindswitchRequestMethod="switchRequestMethod" catchlongpress="longPress" chatType="{{chatType}}" mode="normal" style="max-height: {{chatBoxHeight}}px"></chat-box>
+<view class="topTip" wx:if="{{showTopTip}}" catchtap="closeTopTip"><text class="tipText">长按空白处可弹出更多菜单，点击关闭跑马灯！</text></view>
+<chat-box id="chat-id" bindsuggestSubmit="onSuggestSubmit" bindcancelReceive="onCancelReceive" bindswitchRequestMethod="switchRequestMethod" catchlongpress="longPress" chatType="{{chatType}}" loadData="{{loadData}}" mode="normal" style="max-height: {{chatBoxHeight}}px"></chat-box>
 <view style="bottom:{{inputBottom}}px; border-radius: 12px;margin-left: 1%;z-index: 10000; width: 98%;min-height: 58px;position: fixed;background-color: #f4f6f8;display: flex;align-items:flex-start;justify-content: space-between;border: {{textareaFocus ? '1px': '0px'}} solid {{chatStyleBg[chatStyle]}};">
 	<textarea bindfocus="inputFocus" bindblur="inputBlur" value="{{content}}" adjust-position="{{false}}" focus="{{textareaFocus}}" maxlength="10000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder='请输入问题...' style="padding: 6px;flex: 9;line-height: normal;" placeholder-style="color: {{textareaFocus ? chatStyleBg[chatStyle] : 'b4bbc4'}}" catchtap="focus" bindinput="inputData" catchlongpress="scrollBottom"></textarea>
 	<view style="background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-radius: 0 12px 12px 0;height: 50px;cursor: pointer;margin-right: 8px;padding-top:6px;font-size: 18px;" catchtap="submit" wx:if="{{systemInfo.platform != 'ios'}}">发送</view>
@@ -8,12 +9,13 @@
 	<view class="tipTitle">使用帮助</view>
 	<view class="tipItem">1、输入问题，点击发送按钮开始聊天；</view>
 	<view class="tipItem">2、长按空白处可弹出更多菜单，包括跳转到收藏页面、选择对话模式等；</view>
-	<view class="tipItem">3、长按对话框可对内容进行复制或发送至Memos；</view>
-	<view class="tipItem">4、长按头像可删除该条聊天；</view>
+	<view class="tipItem">3、长按对话框可对内容进行复制或发送至Memos或Flomo(需设置相应API)；</view>
+	<view class="tipItem">4、长按头像可清除该条聊天；</view>
 	<view class="tipItem">5、点击头像可切换渲染(有些渲染出来的效果可能不佳)；</view>
 	<view class="tipItem">6、点击对话框右上方的圆点可进行收藏操作；</view>
 	<view class="tipItem">7、发送“重新对话！”可开启新一轮对话；</view>
-	<view class="tipItem">8、New Bing响应较慢，请耐心等待，在聊天过程中最好不要切出小程序；</view>
-	<view class="tipItem">9、使用过程中有任何的建议或意见欢迎到客服处反馈😊</view>
+	<view class="tipItem">8、请耐心等待New Bing响应，在聊天过程中<text style="font-weight: bold;color: #ff502c;">不建议切出小程序</text>，可能会造成中断；</view>
+	<view class="tipItem">9、请<text style="font-weight: bold;color: #ff502c;">文明提问，不要试图挑战道德及法律底线</text>，有可能关小黑屋！</view>
+	<view class="tipItem">10、使用过程中有任何的建议或意见欢迎到<button open-type="contact" session-from="sessionFrom" style="padding:0;width:2em;display:inline;color:#ff502c;background-color: #e9d7df;line-height: 1.5em;border: none;font-size: 1em;font-weight: bold;text-decoration: underline;">客服</button>反馈😊</view>
 	<view class="tipBtn" catchtap="closeHelpTip"><text class="tipBtnText">知道了</text></view>
 </view>

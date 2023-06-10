@@ -3,17 +3,17 @@
   left: 12%;
   top: 25%;
   width: 76%;
-  background-color: #f4f6f8;
+  background-color: #e9d7df;
   text-align: center;
-  border-radius: 14px;
+  border-radius: 10px;
   padding: 12px 17px 12px 17px;
   box-sizing: border-box;
   z-index: 10000;
-  border: 1px dashed;
+  border: 1.5px dashed #161823;
 }
 
 .bt {
-  background-color: #f4f6f8;
+  background-color: #e9d7df;
   font-size: 18px;
   cursor: pointer;
 }
@@ -37,7 +37,7 @@
 }
 
 .bt-wrap {
-  background-color: #f4f6f8;
+  background-color: #e9d7df;
   display: flex;
   flex-direction: row;
   margin-top: 8px;

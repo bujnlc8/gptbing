@@ -21,7 +21,7 @@ if not sid then
     end
 end
 
-if not sid then
+if not sid or ngx.var.uri == "/bing/reset" then
     local user_agent = headers['User-Agent']
     if user_agent then
         -- Android分2个实例

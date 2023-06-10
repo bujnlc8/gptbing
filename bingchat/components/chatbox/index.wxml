@@ -12,7 +12,7 @@
 				</view>
 				<view class="content bg-white" catchlongpress="copyContent" data-index="{{index}}" catchtap="{{tools.indexOf(item.originContent, '```markdown') ? 'renderMd': ''}}">
 					<view class="{{item.blink ? 'blinking': ''}}">
-						<mp-html content="{{item.content ? item.content: item.originContent}}" preview-img selectable="{{true}}" markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}" use-anchor="{{true}}" scroll-table="{{true}}" container-style="margin-top: -1em;" wx:if="{{!item.showOrigin}}" /><text wx:else user-select="{{true}}" decode="{{true}}">{{item.originContent}}</text>
+						<mp-html id="mp_html_{{index}}" content="{{item.content ? item.content: item.originContent}}" preview-img selectable="{{true}}" markdown="{{true}}" img-cache="{{true}}" lazy-load="{{true}}" use-anchor="{{true}}" scroll-table="{{true}}" container-style="margin-top: -1em;" wx:if="{{!item.showOrigin}}" /><text wx:else user-select="{{true}}" decode="{{true}}">{{item.originContent}}</text>
 					</view>
 				</view>
 				<quotes content="{{item.originContent}}" catchlongpress="copyContent" data-index="{{index}}"></quotes>

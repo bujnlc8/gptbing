@@ -639,16 +639,30 @@ async def collect_query(request):
     return json({'data': data})
 
 
+def process_content(content):
+    matches = re.findall(r'(\[\d+\]):\s(http[^"]*)\s', content)
+    content = re.sub(r'\[\d+\]:\shttp.*', '', content)
+    content = content.strip()
+    for k, v in matches:
+        content = content.replace(k, '{}({})'.format(k, v))
+    return content
+
+
 @app.post('/bing/share')
 async def share(request):
     sid = request.json.get('sid')
     url = request.json.get('url')
     content = request.json.get('content')
-    logger.info('[Memos] %s send %s to %s', sid, content, url)
+    app_type = request.json.get('app_type', 0)
+    logger.info('[Memos] %s send to %s', sid, url)
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, json={'content': '#NewBing\n' + content}) as resp:
+        async with session.post(url, json={'content': '#NewBing ' + process_content(content)}) as resp:
             if resp.status == 200:
-                return json({'sent': 1})
+                if app_type == 0:
+                    return json({'sent': 1})
+                resp = await resp.json()
+                if resp['code'] == 0:
+                    return json({'sent': 1})
     return json({'sent': 0})
 
 

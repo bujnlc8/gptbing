@@ -17,14 +17,24 @@ var useWebsocket = true;
 // } catch (e) {
 // 	useWebsocket = true
 // }
-var showHelpTip = true;
+// var showHelpTip = false;
+// try {
+//   var closeHelpTip = wx.getStorageSync("closeHelpTip");
+//   if (closeHelpTip) {
+//     showHelpTip = false;
+//   }
+// } catch (e) {
+//   showHelpTip = true;
+// }
+var showTopTip = true;
+
 try {
-  var closeHelpTip = wx.getStorageSync("closeHelpTip");
-  if (closeHelpTip) {
-    showHelpTip = false;
+  var closeTopTip = wx.getStorageSync("closeTopTip");
+  if (closeTopTip) {
+    showTopTip = false;
   }
 } catch (e) {
-  showHelpTip = true;
+  showTopTip = true;
 }
 
 function inputPop() {
@@ -112,7 +122,9 @@ Page({
       precise: "#005366",
     },
     chatBoxHeight: systemInfo.windowHeight - (initHeight + 60),
-    showHelpTip: showHelpTip,
+    showHelpTip: false,
+    loadData: true,
+    showTopTip: showTopTip,
   },
   inputFocus(e) {
     if (inputPop()) {
@@ -188,6 +200,11 @@ Page({
       }
     }, 300);
     var options = this.getOptions();
+    if (options && options["from"] == "friend") {
+      this.setData({
+        loadData: false,
+      });
+    }
     if (options && options["q"]) {
       var q = decodeURIComponent(options["q"]);
       var chatType = this.data.chatType;
@@ -312,6 +329,9 @@ Page({
     });
   },
   submitContent: function (content) {
+    if (!content) {
+      return;
+    }
     var that = this;
     if (that.data.searching) {
       wx.showToast({
@@ -334,6 +354,31 @@ Page({
       } else {
         wx.setStorage({
           key: "memos_openapi",
+          data: url,
+          success: (res) => {
+            wx.showToast({
+              title: "设置成功",
+              icon: "none",
+            });
+          },
+        });
+      }
+      that.setData({
+        content: "",
+        searching: false,
+      });
+      return;
+    }
+    if (content.startsWith("flomo_api#")) {
+      var url = content.split("#")[1];
+      if (!url || !url.startsWith("https")) {
+        wx.showToast({
+          title: "格式错误",
+          icon: "none",
+        });
+      } else {
+        wx.setStorage({
+          key: "flomo_api",
           data: url,
           success: (res) => {
             wx.showToast({
@@ -428,7 +473,7 @@ Page({
         cht.data.chatList.slice(cht.data.chatList.length - 3)
       );
     }
-    if (autoIncrConversation % 2 == 0) {
+    if (autoIncrConversation % 3 == 0) {
       setTimeout(() => {
         cht.setData({
           scrollId: "item" + (autoIncrConversation + "9999"),
@@ -710,7 +755,7 @@ Page({
   deleteAllChat: function () {
     var cht = this.selectComponent("#chat-id");
     wx.showModal({
-      content: "是否删除全部聊天？",
+      content: "是否清除全部聊天？",
       complete: (res) => {
         if (res.confirm) {
           cht.setData({
@@ -764,7 +809,7 @@ Page({
   longPress: function (e) {
     var that = this;
     var cht = this.selectComponent("#chat-id");
-    var itemList = ["设置 🔨 ", "显示帮助", "跳转收藏", "删除聊天"];
+    var itemList = ["设置 🔨 ", "显示帮助", "跳转收藏", "清除聊天"];
     if (
       (app.globalData["saved"] && app.globalData["saved"] == 1) ||
       that.data.chatType == "chatgpt"
@@ -773,7 +818,7 @@ Page({
         "设置 🔨 ",
         "显示帮助",
         "跳转收藏",
-        "删除聊天",
+        "清除聊天",
         that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing",
       ];
     }
@@ -784,15 +829,16 @@ Page({
           wx.showActionSheet({
             itemList: [
               "选择对话模式",
+              "Flomo API 地址",
+              "Memos OpenAPI 地址",
               cht.data.closeShareOnCopy
                 ? "打开复制问题后分享"
                 : "关闭复制问题后分享",
-              "Memos OpenAPI 地址",
             ],
             success: function (res) {
               if (res.tapIndex == 0) {
                 that.chooseChatStyle();
-              } else if (res.tapIndex == 1) {
+              } else if (res.tapIndex == 3) {
                 if (cht.data.closeShareOnCopy) {
                   cht.setData({
                     closeShareOnCopy: false,
@@ -836,6 +882,9 @@ Page({
                   success(res) {
                     if (res.confirm) {
                       var i = res.content;
+                      if (!i) {
+                        return;
+                      }
                       if (i.startsWith("抱歉，电脑版不支持")) {
                         return;
                       }
@@ -859,6 +908,53 @@ Page({
                     }
                   },
                 });
+              } else if (res.tapIndex == 1) {
+                {
+                  var oldUrl = wx.getStorageSync("flomo_api");
+                  if (!oldUrl) {
+                    if (
+                      systemInfo.platform != "ios" &&
+                      systemInfo.platform != "android"
+                    ) {
+                      oldUrl =
+                        "抱歉，电脑版不支持在此输入，请将API地址以下面的格式发送到聊天来完成设置:\nflomo_api#https://flomoapp.com... 注意，将#后面的部分替换成真实地址。";
+                    }
+                  }
+                  wx.showModal({
+                    title: "请输入Flomo的API地址",
+                    placeholderText: "https://flomoapp.com...",
+                    content: oldUrl,
+                    editable: true,
+                    success(res) {
+                      if (res.confirm) {
+                        var i = res.content;
+                        if (!i) {
+                          return;
+                        }
+                        if (i.startsWith("抱歉，电脑版不支持")) {
+                          return;
+                        }
+                        if (!i || !i.startsWith("http")) {
+                          wx.showToast({
+                            title: "格式错误",
+                            icon: "none",
+                          });
+                        } else {
+                          wx.setStorage({
+                            key: "flomo_api",
+                            data: i,
+                            success: (res) => {
+                              wx.showToast({
+                                title: "设置成功",
+                                icon: "none",
+                              });
+                            },
+                          });
+                        }
+                      }
+                    },
+                  });
+                }
               }
             },
           });
@@ -872,7 +968,7 @@ Page({
           });
         } else if (res.tapIndex == 3) {
           wx.showActionSheet({
-            itemList: ["删除本机缓存", "删除全部记录"],
+            itemList: ["清除本机缓存", "清除全部记录"],
             success: (res) => {
               if (res.tapIndex == 0) {
                 app.upload_conversation();
@@ -884,7 +980,7 @@ Page({
                         chatList: [],
                       });
                       wx.showToast({
-                        title: "删除成功",
+                        title: "清除成功",
                       });
                     },
                   });
@@ -952,6 +1048,25 @@ Page({
             });
           },
         });
+      },
+    });
+  },
+  closeTopTip: function () {
+    var that = this;
+    wx.showModal({
+      content: "确定关闭跑马灯？",
+      complete: (res) => {
+        if (res.confirm) {
+          wx.setStorage({
+            key: "closeTopTip",
+            data: 1,
+            success: function () {
+              that.setData({
+                showTopTip: false,
+              });
+            },
+          });
+        }
       },
     });
   },
