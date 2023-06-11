@@ -35,7 +35,7 @@
   word-break: break-all;
   white-space: pre-wrap;
   margin-top: 6px;
-  line-height: 1.65em;
+  line-height: 1.6em;
 }
 
 .bg-green {
@@ -87,7 +87,7 @@
 }
 
 .suggest-item-hover {
-  color: #ff502c;
+  color: #62102e;
   cursor: pointer;
 }
 

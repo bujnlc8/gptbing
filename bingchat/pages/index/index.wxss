@@ -13,15 +13,16 @@ button::after {
   max-height: 80%;
   background-color: #e9d7df;
   position: fixed;
-  top: 12px;
+  top: 20px;
   left: 5%;
-  border: 1.5px dashed #161823;
   border-radius: 10px;
   overflow-y: scroll;
   padding-bottom: 20px;
   z-index: 1000000;
-  line-height: 1.5em;
+  line-height: 1.6em;
   color: #161823;
+  text-align: justify;
+  border: 1px solid #62102e80;
 }
 
 .tipItem {
@@ -58,9 +59,10 @@ button::after {
   width: 100%;
   padding: 6px;
   position: fixed;
-  top: 0;
+  top: 0px;
   background-color: #e9d7df;
-  z-index: 10000;
+  z-index: 100000;
+  cursor: pointer;
 }
 .tipText {
   position: relative;
@@ -71,7 +73,21 @@ button::after {
   0% {
     left: 100%;
   }
+  50% {
+    left: 40%;
+  }
   100% {
     left: -100%;
   }
+}
+
+.strengthenText {
+  font-weight: bold;
+  color: #62102e;
+}
+
+.strengthenTextUnderline {
+  font-weight: bold;
+  color: #62102e;
+  text-decoration: underline;
 }

@@ -3,10 +3,21 @@ import { doRequest, sidPrefix } from "./config";
 App({
   onShow: function () {},
   onLaunch: function () {
-    this.getSid((sid) => {
-      console.log(sid);
-    });
-    this.upload_conversation();
+    // this.getSid((sid) => {
+    //   console.log(sid);
+    // });
+    // this.upload_conversation();
+    var that = this;
+    if (that.globalData.sid) {
+      that.upload_cache_conversation(that.globalData.sid);
+    } else {
+      wx.getStorage({
+        key: "sid1",
+        success: (res) => {
+          that.upload_cache_conversation(res.data);
+        },
+      });
+    }
   },
   onHide: function () {
     // this.upload_conversation()

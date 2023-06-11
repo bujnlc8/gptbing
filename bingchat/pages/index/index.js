@@ -117,7 +117,7 @@ Page({
     chatType: chatType,
     chatStyle: chatStyle,
     chatStyleBg: {
-      creative: "#8B257E",
+      creative: "#62102e",
       balanced: "#1B4AEF",
       precise: "#005366",
     },
@@ -220,7 +220,7 @@ Page({
         chatStyle = options["chatStyle"];
       }
       this.setData({
-        searchPopMessage: "即将搜索“" + q + "”",
+        searchPopMessage: "即将搜索「" + q + "」",
         showSearchPop: true,
         q: q,
         chatType: chatType,
@@ -239,7 +239,7 @@ Page({
         robContent.indexOf("New topic") != -1 &&
         this.data.chatType == "bing"
       ) {
-        robContent += "\n发送“重新对话！”开始新的对话";
+        robContent += "\n发送「重新对话！」开始新的对话";
         suggests.push("重新对话！");
         suggests.push(content);
       }
@@ -329,7 +329,7 @@ Page({
     });
   },
   submitContent: function (content) {
-    if (!content) {
+    if (!content || !content.trim()) {
       return;
     }
     var that = this;
@@ -473,17 +473,19 @@ Page({
         cht.data.chatList.slice(cht.data.chatList.length - 3)
       );
     }
-    if (autoIncrConversation % 3 == 0) {
-      setTimeout(() => {
-        cht.setData({
-          scrollId: "item" + (autoIncrConversation + "9999"),
-        });
-      }, 100);
-    }
+    setTimeout(() => {
+      cht.setData({
+        scrollId: "item" + (autoIncrConversation + "9999"),
+      });
+    }, 100);
   },
   submit() {
     var content = this.data.content;
-    if (content.length == 0 || content.trim().length == 0) {
+    if (!content || content.length == 0 || content.trim().length == 0) {
+      wx.showToast({
+        title: "请输入问题",
+        icon: "none",
+      });
       return;
     }
     this.submitContent(content);
@@ -530,7 +532,9 @@ Page({
   },
   onSuggestSubmit: function (e) {
     var suggest = e.detail.suggest;
-    this.submitContent(suggest);
+    if (suggest) {
+      this.submitContent(suggest);
+    }
   },
   focus: function (e) {
     this.setData({
@@ -789,7 +793,10 @@ Page({
       itemList: items,
       success(res) {
         wx.showToast({
-          title: ("已选择“" + items[res.tapIndex] + "”").replace("(已选)", ""),
+          title: ("已选择「" + items[res.tapIndex] + "」").replace(
+            "(已选)",
+            ""
+          ),
           icon: "none",
         });
         var chatStyle = chatStyleList[res.tapIndex];
@@ -832,8 +839,8 @@ Page({
               "Flomo API 地址",
               "Memos OpenAPI 地址",
               cht.data.closeShareOnCopy
-                ? "打开复制问题后分享"
-                : "关闭复制问题后分享",
+                ? "打开复制问题后弹出分享"
+                : "关闭复制问题后弹出分享",
             ],
             success: function (res) {
               if (res.tapIndex == 0) {
@@ -1054,7 +1061,7 @@ Page({
   closeTopTip: function () {
     var that = this;
     wx.showModal({
-      content: "确定关闭跑马灯？",
+      content: "确定关闭？",
       complete: (res) => {
         if (res.confirm) {
           wx.setStorage({
@@ -1068,6 +1075,12 @@ Page({
           });
         }
       },
+    });
+  },
+  sendResetConversation: function () {
+    this.submitContent("重新对话！");
+    this.setData({
+      showHelpTip: false,
     });
   },
 });

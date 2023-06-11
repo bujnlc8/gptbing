@@ -32,5 +32,5 @@
 	<view id="{{'item'+ autoIncrConversation + 9999}}" style="height: 1em;"></view>
 </scroll-view>
 <icon wx:if="{{receiveData}}" type="cancel" catchtap="cancelReceive" style="position: absolute;bottom: 84px;right:1%;z-index: 10000;" size="22"></icon>
-<popup message="是否分享搜索内容？" wx:if="{{showShare}}" bindPopButtonClick="onPopButtonClick" openType="share"></popup>
+<popup message="即将分享「{{shareContent}}」" wx:if="{{showShare}}" bindPopButtonClick="onPopButtonClick" openType="share"></popup>
 <view wx:if="{{showPrevBt && !(systemInfo.platform == 'ios' || systemInfo.platform == 'android') }}" catchtap="bindscrolltoupper" style="width: 50px;height: 50px;border-radius: 25px;background-color: #b4bbc4;position: fixed; bottom: 80px;right: 10px;opacity: 0.8;text-align: center;line-height: 50px;z-index: 10000;cursor: pointer;">翻页</view>

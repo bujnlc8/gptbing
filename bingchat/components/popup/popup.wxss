@@ -9,7 +9,8 @@
   padding: 12px 17px 12px 17px;
   box-sizing: border-box;
   z-index: 10000;
-  border: 1.5px dashed #161823;
+  /* border: 1.5px dashed #161823; */
+  border: 1px solid #62102e80;
 }
 
 .bt {
@@ -44,6 +45,6 @@
 }
 
 .btn-click {
-  color: #ff502c;
+  color: #62102e;
   font-weight: bold;
 }

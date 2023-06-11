@@ -277,7 +277,7 @@ async def ws_chat(_, ws):
                     await ask_bing(
                         ws,
                         sid,
-                        q,
+                        '刚刚发生了点错误，请再耐心回答以下问题：' + q,
                         style,
                         reconnect=reconnect,
                     )
@@ -645,7 +645,8 @@ def process_content(content):
     content = content.strip()
     for k, v in matches:
         content = content.replace(k, '{}({})'.format(k, v))
-    return content
+    content = content.replace(' ```', '```').replace(' ```', '```')
+    return content + ' #NewBing'
 
 
 @app.post('/bing/share')
@@ -656,7 +657,7 @@ async def share(request):
     app_type = request.json.get('app_type', 0)
     logger.info('[Memos] %s send to %s', sid, url)
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, json={'content': '#NewBing ' + process_content(content)}) as resp:
+        async with session.post(url, json={'content': process_content(content)}) as resp:
             if resp.status == 200:
                 if app_type == 0:
                     return json({'sent': 1})

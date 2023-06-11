@@ -59,6 +59,7 @@ Component({
     autoIncrConversation: 1,
     closeShareOnCopy: closeShareOnCopy,
     showShare: false,
+    shareContent: "",
     loadingData: false,
     systemInfo: systemInfo,
     height: systemInfo.windowHeight - (systemInfo.platform == "ios" ? 75 : 65),
@@ -230,6 +231,9 @@ Component({
       });
     },
     copyContentToClipBoard: function (content, index) {
+      if (!content) {
+        return;
+      }
       var that = this;
       wx.setClipboardData({
         data: content,
@@ -242,9 +246,14 @@ Component({
             !that.data.closeShareOnCopy &&
             that.data.mode == "normal"
           ) {
+            var shareContent = content;
+            if (shareContent.length > 8) {
+              shareContent = shareContent.substr(0, 8) + "...";
+            }
             setTimeout(() => {
               that.setData({
                 showShare: true,
+                shareContent: shareContent,
               });
               wx.setStorage({
                 key: "shareContent",
