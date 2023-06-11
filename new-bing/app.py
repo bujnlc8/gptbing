@@ -262,7 +262,8 @@ async def ws_chat(_, ws):
                 await asyncio.sleep(60)
             if 'Concurrent call to receive() is not allowed' in msg:
                 await asyncio.sleep(60)
-            if 'Connector is closed' in msg or 'The last message is being processed' in msg:
+            if ('Connector is closed' in msg or 'The last message is being processed' in msg
+                    or 'Cannot receive from websocket' in msg):
                 reconnect = True
             if 'Your prompt has been blocked by Bing' in msg:
                 try_times = 0
@@ -287,13 +288,15 @@ async def ws_chat(_, ws):
                 except Exception as e:
                     logger.error('%s', traceback.format_exc())
                     msg = str(e) or SERVICE_NOT_AVALIABLE
+                # Cannot receive from websocket interface after it is closed
                 if 'Cannot write to closing transport' in msg:
                     reconnect = True
                     # 等待上一个回答完成
                     await asyncio.sleep(60)
                 if 'Concurrent call to receive() is not allowed' in msg:
                     await asyncio.sleep(60)
-                if 'Connector is closed' in msg or 'The last message is being processed' in msg:
+                if ('Connector is closed' in msg or 'The last message is being processed' in msg
+                        or 'Cannot receive from websocket' in msg):
                     reconnect = True
                 if 'Your prompt has been blocked by Bing' in msg:
                     try_times = 0
