@@ -188,6 +188,10 @@ class _ChatHubRequest:
                     'allowedMessageTypes': [
                         'Chat',
                         'GenerateContentQuery',
+                        'InternalLoaderMessage',
+                        'InternalSearchQuery',
+                        'SearchQuery',
+                        "Progress",
                         'Disengaged',
                     ],
                     'sliceIds': [],
@@ -387,8 +391,13 @@ class _ChatHub:
                 ssl=ssl_context,
                 autoclose=True,
                 timeout=6 * 3600 - 5,
+                proxy=_get_proxy(),
             )
             await self._initial_handshake()
+            logger.info(
+                '[Session] create session, %s.',
+                self.wss,
+            )
         else:
             logger.info(
                 '[Session] reuse session, %s, closed: %s, closing: %s.',
@@ -401,18 +410,14 @@ class _ChatHub:
             conversation_style=conversation_style,
             options=options,
         )
-        #  await self.wss.send_str(_append_identifier({
-        #      'type': 6,
-        #  }))
         await self.wss.send_str(_append_identifier(self.request.struct))
         final = False
         draw = False
         resp_txt = ''
-        result_text = ''
         resp_txt_no_link = ''
         no_data_times = 0
         while not final:
-            msg = await self.wss.receive(timeout=60)
+            msg = await self.wss.receive(timeout=120)
             if msg.data is None:
                 no_data_times += 1
                 if no_data_times >= 5:
@@ -437,28 +442,27 @@ class _ChatHub:
                                 cookie_path=cookie_path,
                             )
                             for i, image in enumerate(images):
-                                resp_txt = resp_txt + f'\n![image{i}]({image})'
+                                resp_txt += f'\n![image{i}]({image})'
                             draw = True
                         if (response['arguments'][0]['messages'][0]['contentOrigin'] != 'Apology') and not draw:
-                            resp_txt = result_text + response['arguments'][0]['messages'][0]['adaptiveCards'][0][
-                                'body'][0].get('text', '')
-                            resp_txt_no_link = result_text + response['arguments'][0]['messages'][0].get('text', '')
-                            if response['arguments'][0]['messages'][0].get('messageType', ):
-                                resp_txt = (
-                                    resp_txt + response['arguments'][0]['messages'][0]['adaptiveCards'][0]['body'][0]
-                                    ['inlines'][0].get('text') + '\n'
-                                )
-                                result_text = (
-                                    result_text + response['arguments'][0]['messages'][0]['adaptiveCards'][0]['body'][0]
-                                    ['inlines'][0].get('text') + '\n'
-                                )
+                            resp_txt = response['arguments'][0]['messages'][0]['adaptiveCards'][0]['body'][0].get(
+                                'text', ''
+                            )
+                            resp_txt_no_link = resp_txt + response['arguments'][0]['messages'][0].get('text', '')
+                            if response['arguments'][0]['messages'][0].get('messageType', ''):
+                                resp_txt = response['arguments'][0]['messages'][0]['adaptiveCards'][0]['body'][0][
+                                    'inlines'][0].get('text')
                         yield False, resp_txt
 
                 elif response.get('type') == 2:
                     try:
                         logger.info('[Response] %s', response)
                         if draw:
-                            response['item']['messages'][1]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
+                            for i in range(1, len(response['item']['messages'])):
+                                try:
+                                    response['item']['messages'][i]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
+                                except:
+                                    pass
                         if (response['item']['messages'][-1]['contentOrigin'] == 'Apology' and resp_txt):
                             response['item']['messages'][-1]['text'] = resp_txt_no_link
                             response['item']['messages'][-1]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
@@ -466,12 +470,18 @@ class _ChatHub:
                         pass
                     final = True
                     yield True, response
-                elif response.get('type') == 6 or response.get('type') == 3:
+                elif response.get('type') == 6:
                     try:
                         logger.info('[Response], receive %s', response)
                         await self.wss.send_str(_append_identifier({'type': 6}))
                     except Exception:
                         logger.error('[Response], send response to bing error occor', exc_info=True)
+                elif response.get('type') in (3, 7):
+                    try:
+                        logger.info('[Response], receive %s', response)
+                        await self.close()
+                    except Exception:
+                        pass
                 else:
                     logger.info('[Response], receive %s', response)
 
@@ -483,6 +493,9 @@ class _ChatHub:
             'version': 1
         }))
         await self.wss.receive(timeout=60)
+        await self.wss.send_str(_append_identifier({
+            'type': 6,
+        }))
 
     async def close(self) -> None:
         """

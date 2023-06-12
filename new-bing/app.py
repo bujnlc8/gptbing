@@ -45,7 +45,7 @@ OPENAI_CONVERSATION = defaultdict(lambda: [])
 
 OPENAI_DEFAULT_PROMPT = {
     'role': 'system',
-    'content': "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully. Respond using markdown."  # type: ignore
+    'content': "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully. Respond using markdown."  # noqa
 }
 
 HIDDEN_TEXTS = [
@@ -53,6 +53,16 @@ HIDDEN_TEXTS = [
     '嗯……对于这个问题很抱歉',
     'try a different topic.',
 ]
+
+
+def wrap_q(q):
+    if q.startswith('刚刚发生了点错误'):
+        return q
+    return '刚刚发生了点错误，请再耐心回答以下问题：' + q
+
+
+def strip_hello(text):
+    return text.replace('你好，这是必应。', '').replace('你好，这是Bing。', '')
 
 
 def check_hidden(text):
@@ -125,7 +135,7 @@ def make_response_data(status, text, suggests, message, num_in_conversation=-1, 
     data = {
         'data': {
             'status': status,
-            'text': text,
+            'text': strip_hello(text),
             'suggests': suggests,
             'message': message,
             'num_in_conversation': num_in_conversation,
@@ -162,7 +172,6 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
             'data': make_response_data('Success', resp, [], '')
         }))
         return
-    index = 0
     async for response in get_bot(sid).ask_stream(
             q,
             conversation_style=ConversationStyle[style],
@@ -176,7 +185,7 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
                 processed_data['data']['suggests'].append(q)
             if processed_data['data']['status'] == 'ProcessingMessage':
                 #  await reset_conversation(sid)
-                await asyncio.sleep(60)
+                await asyncio.sleep(15)
                 raise Exception(
                     'The last message is being processed. Please wait for a while before submitting further messages.'
                 )
@@ -199,12 +208,10 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
         else:
             if res and not check_hidden(res):
                 last_not_final_text = res
-                if index % 2 == 0:
-                    await ws.send(raw_json.dumps({
-                        'final': final,
-                        'data': res
-                    }))
-                index += 1
+                await ws.send(raw_json.dumps({
+                    'final': final,
+                    'data': strip_hello(res),
+                }))
 
 
 def check_forbidden_words(sid, q):
@@ -256,29 +263,28 @@ async def ws_chat(_, ws):
             logger.error('%s', traceback.format_exc())
             msg = str(e) or SERVICE_NOT_AVALIABLE
         if msg:
-            if 'Cannot write to closing transport' in msg:
-                reconnect = True
-                # 等待上一个回答完成
-                await asyncio.sleep(60)
-            if 'Concurrent call to receive() is not allowed' in msg:
-                await asyncio.sleep(60)
-            if ('Connector is closed' in msg or 'The last message is being processed' in msg
-                    or 'Cannot receive from websocket' in msg):
-                reconnect = True
-            if 'Your prompt has been blocked by Bing' in msg:
-                try_times = 0
-            if OVER_DAY_LIMIT in msg:
-                try_times = 0
             while try_times and msg:
                 try:
                     try_times -= 1
-                    if NO_ACCESS in msg:
+                    if 'Cannot write to closing transport' in msg:
+                        reconnect = True
+                        # 等待上一个回答完成
+                        await asyncio.sleep(45)
+                    if 'Concurrent call to receive() is not allowed' in msg:
+                        await asyncio.sleep(45)
+                    if ('Connector is closed' in msg or 'The last message is being processed' in msg
+                            or 'Cannot receive from websocket' in msg):
+                        reconnect = True
+                    if OVER_DAY_LIMIT in msg or NO_ACCESS in msg or 'Your prompt has been blocked by Bing' in msg:
                         break
+                    should_wrap = False
+                    if 'Unexpected message type: 8' not in msg:
+                        should_wrap = True
                     msg = ''
                     await ask_bing(
                         ws,
                         sid,
-                        '刚刚发生了点错误，请再耐心回答以下问题：' + q,
+                        wrap_q(q) if should_wrap else q,
                         style,
                         reconnect=reconnect,
                     )
@@ -288,18 +294,6 @@ async def ws_chat(_, ws):
                 except Exception as e:
                     logger.error('%s', traceback.format_exc())
                     msg = str(e) or SERVICE_NOT_AVALIABLE
-                # Cannot receive from websocket interface after it is closed
-                if 'Cannot write to closing transport' in msg:
-                    reconnect = True
-                    # 等待上一个回答完成
-                    await asyncio.sleep(60)
-                if 'Concurrent call to receive() is not allowed' in msg:
-                    await asyncio.sleep(60)
-                if ('Connector is closed' in msg or 'The last message is being processed' in msg
-                        or 'Cannot receive from websocket' in msg):
-                    reconnect = True
-                if 'Your prompt has been blocked by Bing' in msg:
-                    try_times = 0
             if msg:
                 reconnect = False
                 await ws.send(raw_json.dumps({
@@ -335,30 +329,22 @@ async def process_data(res, q, sid, auto_reset=None):
         except:
             pass
         if len(item) >= 2:
-            index = 1
-            # 多于2个adaptiveCards
-            for i in range(2, len(item)):
+            index = -1
+            for i in range(1, len(item)):
                 if 'adaptiveCards' in item[i]:
                     try:
-                        text_ = item[i]['adaptiveCards'][0]['body'][0]['text']
-                        if text_:
-                            item[1]['adaptiveCards'][0]['body'][0]['text'] += ('\n' + text_)
+                        text += item[i]['adaptiveCards'][0]['body'][0]['text'] + '\n'
                     except KeyError:
                         pass
                 if 'suggestedResponses' in item[i]:
                     index = i
-            if 'adaptiveCards' in item[1]:
-                try:
-                    text = item[1]['adaptiveCards'][0]['body'][0]['text']
-                except KeyError:
-                    pass
             if not text:
-                if 'text' not in item[1]:
+                if 'text' not in item[-1]:
                     await reset_conversation(sid)
                     text = '抱歉，New Bing已结束当前聊天。现已开启新一轮对话。'
                     logger.error('响应异常：%s', res)
                 else:
-                    text = item[1]['text']
+                    text = item[-1]['text']
             text = re.sub(r'\[\^\d+\^\]', '', text)
             suggests = [x['text']
                         for x in item[index]['suggestedResponses']] if 'suggestedResponses' in item[index] else []
