@@ -61,8 +61,13 @@ def wrap_q(q):
     return '刚刚发生了点错误，请再耐心回答以下问题：' + q
 
 
+STRIP_WORDS = ['你好，这是必应。', '你好，这是Bing。', '您好，这是必应。', '您好，这是Bing。']
+
+
 def strip_hello(text):
-    return text.replace('你好，这是必应。', '').replace('你好，这是Bing。', '')
+    for x in STRIP_WORDS:
+        text = text.replace(x, '')
+    return text
 
 
 def check_hidden(text):
@@ -104,7 +109,6 @@ def get_bot(sid, cookie_path=None):
         os.remove(file)
         logger.info('Reload %s session success.', sid)
     except Exception:
-        logger.error('Reload %s session error.', sid, exc_info=True)
         bot = Chatbot(cookie_path=cookie_path)
     bots[sid] = {
         'bot': bot,
@@ -488,11 +492,11 @@ async def ws_openai_chat(_, ws):
                 'content': q,
             })
             num_tokens = num_tokens_from_messages(history_conversation)
-            if num_tokens > 4097:
+            if num_tokens > 4096:
                 history_conversation = history_conversation[5:]
                 history_conversation.insert(0, OPENAI_DEFAULT_PROMPT)
             response = openai.ChatCompletion.create(
-                model='gpt-3.5-turbo',
+                model='gpt-3.5-turbo-0613',
                 messages=history_conversation,
                 temperature=get_temperature(style),
                 presence_penalty=1,
@@ -550,11 +554,11 @@ async def openai_chat(request):
             'content': q,
         })
         num_tokens = num_tokens_from_messages(history_conversation)
-        if num_tokens > 4097:
+        if num_tokens > 4096:
             history_conversation = history_conversation[5:]
             history_conversation.insert(0, OPENAI_DEFAULT_PROMPT)
         response = openai.ChatCompletion.create(
-            model='gpt-3.5-turbo',
+            model='gpt-3.5-turbo-0613',
             messages=history_conversation,
             temperature=get_temperature(style),
             presence_penalty=1,
@@ -635,7 +639,7 @@ def process_content(content):
     for k, v in matches:
         content = content.replace(k, '{}({})'.format(k, v))
     content = content.replace(' ```', '```').replace(' ```', '```')
-    return content + ' #NewBing'
+    return content + '\n#NewBing'
 
 
 @app.post('/bing/share')
