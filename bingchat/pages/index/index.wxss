@@ -10,19 +10,19 @@ button::after {
 
 .helpTip {
   width: 90%;
-  max-height: 80%;
-  background-color: #e9d7df;
+  max-height: 85%;
+  background-color: #fff;
   position: fixed;
-  top: 20px;
+  top: 25px;
   left: 5%;
   border-radius: 10px;
   overflow-y: scroll;
-  padding-bottom: 20px;
-  z-index: 1000000;
+  padding-bottom: 30px;
+  z-index: 100000;
   line-height: 1.6em;
   color: #161823;
   text-align: justify;
-  border: 1px solid #62102e80;
+  border: 1.5px solid #62102e90;
 }
 
 .tipItem {
@@ -31,10 +31,8 @@ button::after {
 
 .tipBtn {
   position: absolute;
-  bottom: 8px;
   text-align: center;
   width: 100%;
-  margin-top: 16px;
   font-size: 18px;
   cursor: pointer;
 }
@@ -57,17 +55,19 @@ button::after {
 }
 .topTip {
   width: 100%;
-  padding: 6px;
   position: fixed;
   top: 0px;
-  background-color: #e9d7df;
-  z-index: 100000;
+  background-color: #e9d7dff8;
+  z-index: 10001;
   cursor: pointer;
+  height: 32px;
+  line-height: 32px;
+  color: #62102e;
+  font-weight: bold;
 }
 .tipText {
   position: relative;
   animation: scroll 6s infinite linear;
-  color: #161823;
 }
 @keyframes scroll {
   0% {
@@ -90,4 +90,14 @@ button::after {
   font-weight: bold;
   color: #62102e;
   text-decoration: underline;
+  cursor: pointer;
+}
+.board {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  z-index: 10003;
+  background-color: rgba(0, 0, 0, 0.5);
 }

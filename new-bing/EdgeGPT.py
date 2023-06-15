@@ -361,69 +361,43 @@ class _ChatHub:
         raw: bool = False,
         options: dict = None,
         cookie_path: str = '',
-        reconnect: bool = False,
+        another_try: bool = False,
     ) -> Generator[str, None, None]:
         """
         Ask a question to the bot
         """
-        if reconnect:
-            logger.info(
-                '[Reconnect] reconnect session, %s, closed: %s, closing: %s.',
-                self.wss,
-                self.wss.closed if self.wss else None,
-                self.wss._closing if self.wss else None,
-            )
-            await self.close()
-        else:
-            try:
-                if self.wss:
-                    await self.wss.ping()
-            except:
-                reconnect = True
-                await self.close()
-        if reconnect or not (self.wss and not self.wss.closed and not self.wss._closing
-                             and not self.wss._writer._closing and self.session and not self.session.closed):
-            timeout = aiohttp.ClientTimeout(total=6 * 3600)
-            self.session = aiohttp.ClientSession(timeout=timeout)
-            self.wss = await self.session.ws_connect(
-                wss_link,
-                headers=HEADERS,
-                ssl=ssl_context,
-                autoclose=True,
-                timeout=6 * 3600 - 5,
-                proxy=_get_proxy(),
-            )
-            await self._initial_handshake()
-            logger.info(
-                '[Session] create session, %s.',
-                self.wss,
-            )
-        else:
-            logger.info(
-                '[Session] reuse session, %s, closed: %s, closing: %s.',
-                self.wss,
-                self.wss.closed,
-                self.wss._closing,
-            )
-        self.request.update(
-            prompt=prompt,
-            conversation_style=conversation_style,
-            options=options,
+        timeout = aiohttp.ClientTimeout(total=3600)
+        self.session = aiohttp.ClientSession(timeout=timeout)
+        self.wss = await self.session.ws_connect(
+            wss_link,
+            headers=HEADERS,
+            ssl=ssl_context,
+            autoclose=True,
+            timeout=3600,
+            proxy=_get_proxy(),
         )
+        await self._initial_handshake()
+        logger.info(
+            '[Session] create session, %s.',
+            self.wss,
+        )
+        if not another_try:
+            self.request.update(
+                prompt=prompt,
+                conversation_style=conversation_style,
+                options=options,
+            )
         await self.wss.send_str(_append_identifier(self.request.struct))
+        logger.info('[Request] send data: %s', _append_identifier(self.request.struct))
         final = False
         draw = False
         resp_txt = ''
         resp_txt_no_link = ''
-        no_data_times = 0
         while not final:
-            msg = await self.wss.receive(timeout=120)
+            msg = await self.wss.receive(timeout=600)
             if msg.data is None:
-                no_data_times += 1
-                if no_data_times >= 5:
-                    logger.error('[Response] receive int response, %s, %s, %s', msg, msg.type, msg.data)
-                    raise Exception('Unexpected message type: %s' % msg.type)
-                continue
+                logger.error('[Response] message data is None, %s, %s, %s', msg, msg.type, msg.data)
+                raise Exception('Unexpected message type: %s' % msg.type)
             if type(msg.data) is int:
                 logger.error('[Response] receive int response, %s, %s, %s', msg, msg.type, msg.data)
                 raise Exception('Unexpected message type: %s' % msg.type)
@@ -469,6 +443,10 @@ class _ChatHub:
                     except KeyError:
                         pass
                     final = True
+                    try:
+                        await self.close()
+                    except:
+                        pass
                     yield True, response
                 elif response.get('type') == 6:
                     try:
@@ -476,7 +454,7 @@ class _ChatHub:
                         await self.wss.send_str(_append_identifier({'type': 6}))
                     except Exception:
                         logger.error('[Response], send response to bing error occor', exc_info=True)
-                elif response.get('type') in (3, 7):
+                elif response.get('type') == 3:
                     try:
                         logger.info('[Response], receive %s', response)
                         await self.close()
@@ -563,7 +541,7 @@ class Chatbot:
         conversation_style: CONVERSATION_STYLE_TYPE = None,
         raw: bool = False,
         options: dict = None,
-        reconnect: bool = False,
+        another_try: bool = False,
     ) -> Generator[str, None, None]:
         """
         Ask a question to the bot
@@ -576,7 +554,7 @@ class Chatbot:
                     raw=raw,
                     options=options,
                     cookie_path=self.cookie_path,
-                    reconnect=reconnect,
+                    another_try=another_try,
             ):
                 yield response
         except Exception as e:

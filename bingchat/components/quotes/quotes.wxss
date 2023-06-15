@@ -2,7 +2,7 @@
   display: flex;
   justify-content: flex-start;
   flex-wrap: wrap;
-  background-color: #f4f6f8;
+  background-color: #ffffff;
   border-radius: 0px 10px 0px 10px;
   padding: 6px 10px 6px 10px;
   margin-top: -10px;

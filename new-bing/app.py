@@ -1,26 +1,29 @@
 # coding=utf-8
 
 import asyncio
+import html
 import json as raw_json
 import os
+import pickle
 import re
 import traceback
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-import openai
 import aiohttp
+import openai
 import requests
 import tiktoken
-import pickle
+from sanic import Sanic
+from sanic.response import json
+
 from BingImageCreator import async_image_gen
-from common import DAY_LIMIT, FORBIDDEN_TIP, INTERNAL_ERROR, NO_ACCESS, OVER_DAY_LIMIT, SERVICE_NOT_AVALIABLE
+from common import DAY_LIMIT, FORBIDDEN_TIP, INTERNAL_ERROR, NO_ACCESS, OVER_DAY_LIMIT, \
+    SERVICE_NOT_AVALIABLE
 from conversation_ctr import conversation_ctr
 from dfa import dfa
 from EdgeGPT import Chatbot, ConversationStyle
 from logger import logger
-from sanic import Sanic
-from sanic.response import json
 from send_mail import send_mail
 
 APPID = os.environ.get('WXAPPID')
@@ -136,10 +139,13 @@ def check_blocked(sid):
 
 
 def make_response_data(status, text, suggests, message, num_in_conversation=-1, final=True):
+    text = strip_hello(text)
+    if not text.strip():
+        text = '实在抱歉，我现在无法回答这个问题。 我还能为您提供哪些帮助？'
     data = {
         'data': {
             'status': status,
-            'text': strip_hello(text),
+            'text': text,
             'suggests': suggests,
             'message': message,
             'num_in_conversation': num_in_conversation,
@@ -160,7 +166,7 @@ async def generate_image(q, sid):
     return '\n'.join(resp)
 
 
-async def ask_bing(ws, sid, q, style, reconnect=False):
+async def ask_bing(ws, sid, q, style, another_try=False):
     forbid_data = check_forbidden_words(sid, q)
     if forbid_data:
         await ws.send(raw_json.dumps({
@@ -179,7 +185,7 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
     async for response in get_bot(sid).ask_stream(
             q,
             conversation_style=ConversationStyle[style],
-            reconnect=reconnect,
+            another_try=another_try,
     ):
         final, res = response
         if final:
@@ -188,13 +194,12 @@ async def ask_bing(ws, sid, q, style, reconnect=False):
                 await reset_conversation(sid, reset=True)
                 processed_data['data']['suggests'].append(q)
             if processed_data['data']['status'] == 'ProcessingMessage':
-                #  await reset_conversation(sid)
-                await asyncio.sleep(15)
+                await asyncio.sleep(45)
                 raise Exception(
                     'The last message is being processed. Please wait for a while before submitting further messages.'
                 )
             if processed_data['data']['status'] == 'InternalError':
-                if last_not_final_text:
+                if last_not_final_text and not last_not_final_text.startswith('Searching the web for'):
                     processed_data = make_response_data(
                         'Success', last_not_final_text, [], '', processed_data['data']['num_in_conversation']
                     )
@@ -243,7 +248,6 @@ def check_limit(sid):
 async def ws_chat(_, ws):
     while True:
         msg, sid, q, style, try_times = '', '', '', '', 0
-        reconnect = False
         try:
             data = await ws.recv()
             if not data:
@@ -259,8 +263,7 @@ async def ws_chat(_, ws):
                 raise Exception(OVER_DAY_LIMIT)
             # 发生错误，重试10次
             try_times = 10
-            reconnect = False
-            await ask_bing(ws, sid, q, style, reconnect=reconnect)
+            await ask_bing(ws, sid, q, style)
         except KeyError:
             msg = SERVICE_NOT_AVALIABLE
         except Exception as e:
@@ -270,36 +273,29 @@ async def ws_chat(_, ws):
             while try_times and msg:
                 try:
                     try_times -= 1
-                    if 'Cannot write to closing transport' in msg:
-                        reconnect = True
-                        # 等待上一个回答完成
-                        await asyncio.sleep(45)
-                    if 'Concurrent call to receive() is not allowed' in msg:
-                        await asyncio.sleep(45)
-                    if ('Connector is closed' in msg or 'The last message is being processed' in msg
-                            or 'Cannot receive from websocket' in msg):
-                        reconnect = True
                     if OVER_DAY_LIMIT in msg or NO_ACCESS in msg or 'Your prompt has been blocked by Bing' in msg:
                         break
-                    should_wrap = False
-                    if 'Unexpected message type: 8' not in msg:
-                        should_wrap = True
+                    if 'Concurrent call to receive() is not allowed' in msg:
+                        await asyncio.sleep(45)
+                    another_try = False
+                    if 'Cannot write to closing transport' in msg:
+                        another_try = True
+                    if 'Unexpected message type:' in msg:
+                        another_try = True
                     msg = ''
                     await ask_bing(
                         ws,
                         sid,
-                        wrap_q(q) if should_wrap else q,
+                        wrap_q(q) if not another_try else q,
                         style,
-                        reconnect=reconnect,
+                        another_try=another_try,
                     )
-                    reconnect = False
                 except KeyError:
                     msg = SERVICE_NOT_AVALIABLE
                 except Exception as e:
                     logger.error('%s', traceback.format_exc())
                     msg = str(e) or SERVICE_NOT_AVALIABLE
             if msg:
-                reconnect = False
                 await ws.send(raw_json.dumps({
                     'final': True,
                     'data': make_response_data('Error', msg, [q], msg)
@@ -639,7 +635,7 @@ def process_content(content):
     for k, v in matches:
         content = content.replace(k, '{}({})'.format(k, v))
     content = content.replace(' ```', '```').replace(' ```', '```')
-    return content + '\n#NewBing'
+    return content
 
 
 @app.post('/bing/share')
@@ -647,16 +643,42 @@ async def share(request):
     sid = request.json.get('sid')
     url = request.json.get('url')
     content = request.json.get('content')
+    title = request.json.get('title', '')
+    # 0 memos 1 flomo 2 wiznote
     app_type = request.json.get('app_type', 0)
     logger.info('[Memos] %s send to %s', sid, url)
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, json={'content': process_content(content)}) as resp:
-            if resp.status == 200:
-                if app_type == 0:
-                    return json({'sent': 1})
-                resp = await resp.json()
-                if resp['code'] == 0:
-                    return json({'sent': 1})
+        if app_type == 2:
+            # url = 'https://$host/ks/note/create/$kbGuid/$token'
+            url_split = url.split('/')
+            kb_guid = url_split[-2]
+            token = url_split[-1]
+            data = {
+                'html': html.escape(process_content(content)).replace('\n', '<br/>'),
+                'title': title,
+                'category': '/My Notes/',
+                'kbGuid': kb_guid,
+            }
+            headers = {
+                'X-Wiz-Token': token,
+                'User-Agent': 'NewBBot'
+            }
+            url = '/'.join(url_split[:-1])
+            async with session.post(url, json=data, headers=headers) as resp:
+                if resp.status == 200:
+                    resp = await resp.json()
+                    if resp['returnCode'] == 200:
+                        return json({'sent': 1})
+                    else:
+                        logger.info('[WizNote] url: %s, data: %s, resp: %s', url, data, resp)
+        else:
+            async with session.post(url, json={'content': process_content(content) + '\n#NewBing'}) as resp:
+                if resp.status == 200:
+                    if app_type == 0:
+                        return json({'sent': 1})
+                    resp = await resp.json()
+                    if resp['code'] == 0:
+                        return json({'sent': 1})
     return json({'sent': 0})
 
 

@@ -394,6 +394,31 @@ Page({
       });
       return;
     }
+    if (content.startsWith("wiz_api#")) {
+      var url = content.split("#")[1];
+      if (!url || !url.startsWith("http")) {
+        wx.showToast({
+          title: "格式错误",
+          icon: "none",
+        });
+      } else {
+        wx.setStorage({
+          key: "wiz_api",
+          data: url,
+          success: (res) => {
+            wx.showToast({
+              title: "设置成功",
+              icon: "none",
+            });
+          },
+        });
+      }
+      that.setData({
+        content: "",
+        searching: false,
+      });
+      return;
+    }
     var cht = this.selectComponent("#chat-id");
     that.pushStorageMessage(cht, content, "man", [], false);
     that.setData({
@@ -836,6 +861,7 @@ Page({
           wx.showActionSheet({
             itemList: [
               "选择对话模式",
+              "为知笔记地址",
               "Flomo API 地址",
               "Memos OpenAPI 地址",
               cht.data.closeShareOnCopy
@@ -845,7 +871,7 @@ Page({
             success: function (res) {
               if (res.tapIndex == 0) {
                 that.chooseChatStyle();
-              } else if (res.tapIndex == 3) {
+              } else if (res.tapIndex == 4) {
                 if (cht.data.closeShareOnCopy) {
                   cht.setData({
                     closeShareOnCopy: false,
@@ -870,7 +896,7 @@ Page({
                     data: 1,
                   });
                 }
-              } else if (res.tapIndex == 2) {
+              } else if (res.tapIndex == 3) {
                 var oldUrl = wx.getStorageSync("memos_openapi");
                 if (!oldUrl) {
                   if (
@@ -915,7 +941,7 @@ Page({
                     }
                   },
                 });
-              } else if (res.tapIndex == 1) {
+              } else if (res.tapIndex == 2) {
                 {
                   var oldUrl = wx.getStorageSync("flomo_api");
                   if (!oldUrl) {
@@ -949,6 +975,55 @@ Page({
                         } else {
                           wx.setStorage({
                             key: "flomo_api",
+                            data: i,
+                            success: (res) => {
+                              wx.showToast({
+                                title: "设置成功",
+                                icon: "none",
+                              });
+                            },
+                          });
+                        }
+                      }
+                    },
+                  });
+                }
+              } else if (res.tapIndex == 1) {
+                {
+                  var oldUrl = wx.getStorageSync("wiz_api");
+                  if (!oldUrl) {
+                    if (
+                      systemInfo.platform != "ios" &&
+                      systemInfo.platform != "android" &&
+                      systemInfo.platform != "devtools"
+                    ) {
+                      oldUrl =
+                        "抱歉，电脑版不支持在此输入，请将API地址以下面的格式发送到聊天来完成设置:\nwiz_api#https://${host}/ks/note/create/${kbGuid}/${token} 注意，将${host}、${kbGuid}和${token}是需要替换的变量。";
+                    }
+                  }
+                  wx.showModal({
+                    title: "请输入为知笔记的API地址",
+                    placeholderText:
+                      "https://${host}/ks/note/create/${kbGuid}/${token}",
+                    content: oldUrl,
+                    editable: true,
+                    success(res) {
+                      if (res.confirm) {
+                        var i = res.content;
+                        if (!i) {
+                          return;
+                        }
+                        if (i.startsWith("抱歉，电脑版不支持")) {
+                          return;
+                        }
+                        if (!i || !i.startsWith("http")) {
+                          wx.showToast({
+                            title: "格式错误",
+                            icon: "none",
+                          });
+                        } else {
+                          wx.setStorage({
+                            key: "wiz_api",
                             data: i,
                             success: (res) => {
                               wx.showToast({
@@ -1061,7 +1136,7 @@ Page({
   closeTopTip: function () {
     var that = this;
     wx.showModal({
-      content: "确定关闭？",
+      content: "确定关闭提醒？",
       complete: (res) => {
         if (res.confirm) {
           wx.setStorage({
@@ -1082,5 +1157,8 @@ Page({
     this.setData({
       showHelpTip: false,
     });
+  },
+  catchtouchmove: function (e) {
+    console.log(e);
   },
 });

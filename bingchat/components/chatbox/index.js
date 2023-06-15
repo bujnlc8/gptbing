@@ -271,22 +271,40 @@ Component({
       var index = e.currentTarget.dataset.index;
       var content = this.data.chatList[index].originContent;
       var that = this;
-      var items = ["复制内容", "发送至Flomo", "发送至Memos"];
+      var items = ["复制内容", "发送至Flomo", "发送至Memos", "发送至为知笔记"];
+      var title = "";
       if (that.data.chatList[index]["type"] != "man") {
         items.push("Copy as plain text");
+        title =
+          that.data.chatList[index - 1]["originContent"].substr(0, 16) + ".md";
+      } else {
+        title =
+          that.data.chatList[index]["originContent"].substr(0, 16) + ".md";
       }
       wx.showActionSheet({
         itemList: items,
         success: function (res) {
           if (res.tapIndex == 0) {
             that.copyContentToClipBoard(content, index);
-          } else if (res.tapIndex == 1 || res.tapIndex == 2) {
+          } else if (
+            res.tapIndex == 1 ||
+            res.tapIndex == 2 ||
+            res.tapIndex == 3
+          ) {
             var app_type = 0;
             if (res.tapIndex == 1) {
               app_type = 1;
+            } else if (res.tapIndex == 3) {
+              app_type = 2;
+            }
+            var cache_key = "memos_openapi";
+            if (app_type == 1) {
+              cache_key = "flomo_api";
+            } else if (app_type == 2) {
+              cache_key = "wiz_api";
             }
             wx.getStorage({
-              key: app_type == 0 ? "memos_openapi" : "flomo_api",
+              key: cache_key,
               success: function (res) {
                 app.getSid((sid) => {
                   doRequest("/share", "POST", {
@@ -294,6 +312,7 @@ Component({
                     content: content,
                     sid: sid,
                     app_type: app_type,
+                    title: title,
                   })
                     .then((res) => {
                       if (res.data.sent == 1) {
@@ -323,7 +342,7 @@ Component({
                 });
               },
             });
-          } else if (res.tapIndex == 3) {
+          } else if (res.tapIndex == 4) {
             that.copyRenderedContentToClipBoard(index);
           }
         },
