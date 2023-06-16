@@ -54,8 +54,10 @@ def login(index, user_name, passwd):
 
 
 def should_update(file_path):
+    if not os.path.exists(file_path):
+        return True
     mtime = os.path.getmtime(file_path)
-    if (time.time() - mtime) > 10 * 3600 * 24:
+    if (time.time() - mtime) > (14 * 3600 * 24 - 3600):
         return True
 
 

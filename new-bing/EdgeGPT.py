@@ -15,10 +15,13 @@ from typing import Generator, Literal, Optional, Union
 import aiohttp
 import certifi
 import httpx
+
 from BingImageCreator import async_image_gen
 from logger import logger
 
 DELIMITER = '\x1e'
+
+BING_PROXY_URL = os.environ.get('BING_PROXY_URL')
 
 # Generate random IP between range 13.104.0.0/14
 FORWARDED_IP = (f'13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}')
@@ -226,6 +229,7 @@ class _ChatHubRequest:
                     'participant': {
                         'id': self.client_id,
                     },
+                    "spokenTextMode": "None",
                     'conversationId': self.conversation_id,
                 },
             ],
@@ -268,11 +272,12 @@ class _Conversation:
                 self.session.cookies.set(cookie['name'], cookie['value'])
 
         # Send GET request
-        response = self.session.get(
-            url=os.environ.get('BING_PROXY_URL') or 'https://edgeservices.bing.com/edgesvc/turing/conversation/create',
-        )
+        url = BING_PROXY_URL or 'https://www.bing.com/turing/conversation/create'
+        response = self.session.get(url=url, )
+        if response.status_code != 200 and BING_PROXY_URL:
+            response = self.session.get('https://www.bing.com/turing/conversation/create')
         if response.status_code != 200:
-            response = self.session.get('https://edge.churchless.tech/edgesvc/turing/conversation/create', )
+            response = self.session.get('https://edgeservices.bing.com/edgesvc/turing/conversation/create')
         if response.status_code != 200:
             logger.error('[create], code: %s, response: %s', response.status_code, response.text)
             try:
@@ -312,12 +317,12 @@ class _Conversation:
             for cookie in cookies:
                 client.cookies.set(cookie['name'], cookie['value'])
             # Send GET request
-            response = await client.get(
-                url=os.environ.get('BING_PROXY_URL')
-                or 'https://edgeservices.bing.com/edgesvc/turing/conversation/create',
-            )
+            url = BING_PROXY_URL or 'https://www.bing.com/turing/conversation/create'
+            response = await client.get(url=url)
+            if response.status_code != 200 and BING_PROXY_URL:
+                response = await client.get('https://www.bing.com/turing/conversation/create')
             if response.status_code != 200:
-                response = await client.get('https://edge.churchless.tech/edgesvc/turing/conversation/create', )
+                response = await client.get('https://edgeservices.bing.com/edgesvc/turing/conversation/create')
         if response.status_code != 200:
             try:
                 logger.error('[create], code: %s, response: %s', response.status_code, response.text)
