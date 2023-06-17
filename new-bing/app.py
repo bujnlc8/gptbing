@@ -87,7 +87,7 @@ def check_hidden(text):
 
 def get_cookie_file(sid, cookie_files, reset=False):
     # 优先获取最后一个
-    if not reset and show_chatgpt(sid):
+    if not reset and show_chatgpt(sid) == 3:
         return cookie_files[-1]
     # 根据sid相加取余算出一个数
     total_cookie_num = len(cookie_files) - 1
@@ -129,10 +129,11 @@ async def reset_conversation(sid, reset=False):
 
 
 def show_chatgpt(sid):
+    # 1 chatgpt 2 bard
     for openid in conversation_ctr.get_openai_whitelist():
         if openid.decode() in sid:
             return 3
-    return 0
+    return 2
 
 
 def check_blocked(sid):
@@ -242,7 +243,7 @@ def check_forbidden_words(sid, q):
 
 def check_limit(sid):
     incr = conversation_ctr.get_day_limit(sid)
-    if show_chatgpt(sid):
+    if show_chatgpt(sid) == 3:
         return False
     return True if incr > DAY_LIMIT else False
 
@@ -283,13 +284,11 @@ async def ws_chat(_, ws):
                     another_try = False
                     if 'Cannot write to closing transport' in msg:
                         another_try = True
-                    if 'Unexpected message type:' in msg:
-                        another_try = True
                     msg = ''
                     await ask_bing(
                         ws,
                         sid,
-                        wrap_q(q) if not another_try else q,
+                        wrap_q(q),
                         style,
                         another_try=another_try,
                     )
@@ -322,12 +321,14 @@ async def process_data(res, q, sid, auto_reset=None):
     text = ''
     suggests = []
     status = res['item']['result']['value']
+    offensive = False
     if status == 'Success':
         item = res['item']['messages']
         try:
             user_message = item[0]
             offense = user_message['offense']
             if offense and offense == 'Offensive':
+                offensive = True
                 send_mail('Offense!! ' + sid, str(res))
         except:
             pass
@@ -363,6 +364,8 @@ async def process_data(res, q, sid, auto_reset=None):
         text = 'Thanks for this conversation! But I\'ve reached my limit. 现已开启新一轮对话。'
         if q not in suggests:
             suggests.append(q)
+    if offensive:
+        text += '\n**温馨提醒：你已触发New Bing的Offensive检测机制，请文明提问哦😊，次数过多将被禁止使用！**'
     return make_response_data(
         status, text, suggests, msg,
         res['item']['throttling']['numUserMessagesInConversation'] if 'throttling' in res['item'] else -1
@@ -472,7 +475,7 @@ async def ws_openai_chat(_, ws):
             data = raw_json.loads(data)
             logger.info('[openai] Websocket receive data: %s', data)
             sid = data['sid']
-            if not show_chatgpt(sid):
+            if not (show_chatgpt(sid) & 1):
                 raise Exception(NO_ACCESS)
             q = data['q']
             resp = await generate_image(q, sid)
@@ -539,7 +542,7 @@ async def openai_chat(request):
     try:
         logger.info('[openai] Http request payload: %s', request.json)
         sid = request.json.get('sid')
-        if not show_chatgpt(sid):
+        if not (show_chatgpt(sid) & 1):
             raise Exception(NO_ACCESS)
         q = request.json.get('q')
         resp = await generate_image(q, sid)
@@ -653,13 +656,13 @@ async def ws_bard(_, ws):
             data = raw_json.loads(data)
             logger.info('[bard] Websocket receive data: %s', data)
             sid = data['sid']
-            if not show_chatgpt(sid):
+            if not (show_chatgpt(sid) & 2):
                 raise Exception(NO_ACCESS)
             q = data['q']
             bot = await get_bard_bot(sid)
             resp = await bot.ask(q)
             text = resp['content'].replace('\r\n', '\n')
-            if resp['images']:
+            if resp.get('images'):
                 text += '\n'
                 for x in resp['images']:
                     if x.startswith('http'):
