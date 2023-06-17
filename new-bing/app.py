@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 
 import aiohttp
 import openai
+import urllib
 import requests
 import tiktoken
 from sanic import Sanic
@@ -638,6 +639,20 @@ def process_content(content):
     return content
 
 
+def put_refresh(url, token):
+    if conversation_ctr.redis_client.get('bing:wiz:token:{}'.format(token)):
+        return
+    pareses = urllib.parse.urlparse(url)
+    host = pareses.netloc
+    if host == 'ks.wiz.cn':
+        host = 'as.wiz.cn'
+    refresh_url = '{}://{}/as/user/keep'.format(pareses.scheme, host)
+    # remember refresh_url
+    conversation_ctr.redis_client.set('bing:wiz:refresh_url:{}'.format(token), refresh_url)
+    conversation_ctr.redis_client.set('bing:wiz:token:{}'.format(token), 1, 10)
+    logger.info('[WizToken] %s 加入刷新队列, refresh_url: %s.', token, refresh_url)
+
+
 @app.post('/bing/share')
 async def share(request):
     sid = request.json.get('sid')
@@ -668,6 +683,8 @@ async def share(request):
                 if resp.status == 200:
                     resp = await resp.json()
                     if resp['returnCode'] == 200:
+                        # 将token加入刷新，可能是自部署服务，需要带上host
+                        put_refresh(url, token)
                         return json({'sent': 1})
                     else:
                         logger.info('[WizNote] url: %s, data: %s, resp: %s', url, data, resp)
@@ -702,4 +719,11 @@ def after_server_stop(*_):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    if os.environ.get('REFRESH_WIZ'):
+        while True:
+            try:
+                conversation_ctr.refresh_wiz_token()
+            except:
+                logger.error('refresh_wiz_token error occor', exc_info=True)
+    else:
+        app.run(host='0.0.0.0', port=8000)

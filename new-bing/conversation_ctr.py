@@ -5,6 +5,9 @@ import json
 import os
 
 import redis
+import requests
+
+from logger import logger
 
 REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
@@ -106,6 +109,51 @@ class ConversationCtr:
     def get_day_limit(self, sid):
         key = self.DAY_LIMIT % (datetime.datetime.now().strftime('%Y%m%d'), sid)
         return self.redis_client.incr(key)
+
+    def refresh_wiz_token(self):
+        """refresh_wiz_token. 刷新wiz token 15分钟有效期
+
+        :param self:
+        """
+        pubsub = self.redis_client.pubsub()
+        pubsub.psubscribe('__keyevent@*__:expired')
+        for data in pubsub.listen():
+            key = data.get('data')
+            if key == 1:
+                continue
+            key = key.decode()
+            if not key.startswith('bing:wiz:token'):
+                continue
+            token = key.split(':')[-1]
+            # 获取刷新url
+            refresh_url = self.redis_client.get('bing:wiz:refresh_url:{}'.format(token))
+            if not refresh_url:
+                logger.error('[RefreshWiz] cannot find refresh_url for %s', token)
+                continue
+            refresh_url = refresh_url.decode()
+            try:
+                self.do_refresh(token, refresh_url)
+            except:
+                logger.error('[RefreshWiz] refresh %s failed', token, exc_info=True)
+                try:
+                    self.do_refresh(token, refresh_url)
+                except:
+                    logger.error('[RefreshWiz] refresh %s failed again', token, exc_info=True)
+
+    def do_refresh(self, token, refresh_url):
+        resp = requests.get(
+            refresh_url,
+            headers={
+                'X-Wiz-Token': token,
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',  # noqa
+            }
+        ).json()
+        if resp['returnCode'] == 200:
+            logger.info('[RefreshWiz] refresh %s success', token)
+            if not self.redis_client.get('bing:wiz:token:{}'.format(token)):
+                self.redis_client.set('bing:wiz:token:{}'.format(token), 1, 12 * 60)
+        else:
+            logger.error('[RefreshWiz] refresh %s failed, returnCode: %s', token, resp['returnCode'])
 
 
 conversation_ctr = ConversationCtr()

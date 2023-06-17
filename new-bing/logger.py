@@ -1,7 +1,13 @@
 # coding=utf-8
 
 import logging
+import os
 from logging import handlers
+
+log_file = 'chat.log'
+
+if os.environ.get('REFRESH_WIZ'):
+    log_file = 'refresh_wiz.log'
 
 
 def init_log():
@@ -11,7 +17,7 @@ def init_log():
     sh = logging.StreamHandler()
     sh.setFormatter(fmt)
     logger.addHandler(sh)
-    th = handlers.RotatingFileHandler('/sanic/logs/chat.log', maxBytes=10 * 1024 * 1024)
+    th = handlers.RotatingFileHandler('/sanic/logs/{}'.format(log_file), maxBytes=10 * 1024 * 1024)
     th.setFormatter(fmt)
     logger.addHandler(th)
     return logger
