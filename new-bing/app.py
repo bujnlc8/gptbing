@@ -9,6 +9,7 @@ import re
 import traceback
 from collections import defaultdict
 from datetime import datetime, timedelta
+from Bard import Chatbot as BardBot
 
 import aiohttp
 import openai
@@ -43,6 +44,7 @@ app.config.WEBSOCKET_PING_INTERVAL = 10
 app.config.WEBSOCKET_PING_TIMEOUT = 60
 
 bots = {}
+bard_bots = {}
 
 # openai conversation
 OPENAI_CONVERSATION = defaultdict(lambda: [])
@@ -129,7 +131,7 @@ async def reset_conversation(sid, reset=False):
 def show_chatgpt(sid):
     for openid in conversation_ctr.get_openai_whitelist():
         if openid.decode() in sid:
-            return 1
+            return 3
     return 0
 
 
@@ -629,6 +631,54 @@ async def collect_query(request):
     return json({'data': data})
 
 
+# #########################################以下是Bard接口##################################
+
+
+async def get_bard_bot(sid) -> BardBot:
+    if sid in bard_bots:
+        return bard_bots[sid]
+    bot = await BardBot.create(file_path='/sanic/sessions/{}.bard'.format(sid))
+    bard_bots[sid] = bot
+    return bot
+
+
+@app.websocket('/bing/ws_bard')
+async def ws_bard(_, ws):
+    while True:
+        msg, sid, q = '', '', ''
+        try:
+            data = await ws.recv()
+            if not data:
+                continue
+            data = raw_json.loads(data)
+            logger.info('[bard] Websocket receive data: %s', data)
+            sid = data['sid']
+            if not show_chatgpt(sid):
+                raise Exception(NO_ACCESS)
+            q = data['q']
+            bot = await get_bard_bot(sid)
+            resp = await bot.ask(q)
+            text = resp['content'].replace('\r\n', '\n')
+            if resp['images']:
+                text += '\n'
+                for x in resp['images']:
+                    if x.startswith('http'):
+                        text += '![]({})'.format(x) + '\n'
+                    else:
+                        text += x + '\n'
+            await ws.send(raw_json.dumps({
+                'final': True,
+                'data': make_response_data('Success', text, [], msg)
+            }))
+        except Exception as e:
+            logger.error('%s', traceback.format_exc())
+            msg = str(e) or SERVICE_NOT_AVALIABLE
+            await ws.send(raw_json.dumps({
+                'final': True,
+                'data': make_response_data('Error', msg, [q], msg)
+            }))
+
+
 def process_content(content):
     matches = re.findall(r'(\[\d+\]):\s(http[^"]*)\s', content)
     content = re.sub(r'\[\d+\]:\shttp.*', '', content)
@@ -700,7 +750,7 @@ async def share(request):
 
 
 @app.after_server_stop
-def after_server_stop(*_):
+async def after_server_stop(*_):
     logger.info('Save sessions...')
     for sid, bot in bots.items():
         try:
@@ -716,6 +766,12 @@ def after_server_stop(*_):
             logger.info('Save %s openai session success.', sid)
         except:
             logger.error('Save %s openai session error.', sid, exc_info=True)
+    for sid, bot in bard_bots.items():
+        try:
+            await bot.save_conversation()
+            logger.info('Save %s bard session success.', sid)
+        except:
+            logger.error('Save %s bard session error.', sid, exc_info=True)
 
 
 if __name__ == '__main__':

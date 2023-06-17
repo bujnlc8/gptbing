@@ -3,11 +3,17 @@ import { doRequest, sidPrefix } from "./config";
 App({
   onShow: function () {},
   onLaunch: function () {
+    var that = this;
+    wx.getStorage({
+      key: "selectedChatType",
+      success: (res) => {
+        that.globalData.chatType = res.data;
+      },
+    });
     // this.getSid((sid) => {
     //   console.log(sid);
     // });
     // this.upload_conversation();
-    var that = this;
     if (that.globalData.sid) {
       that.upload_cache_conversation(that.globalData.sid);
     } else {
@@ -22,7 +28,9 @@ App({
   onHide: function () {
     // this.upload_conversation()
   },
-  globalData: {},
+  globalData: {
+    chatType: "bing",
+  },
   upload_cache_conversation: function (sid) {
     var that = this;
     wx.getStorage({

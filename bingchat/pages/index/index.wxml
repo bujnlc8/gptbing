@@ -8,16 +8,18 @@
 	<view style="background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-radius: 0 12px 12px 0;height: 50px;cursor: pointer;margin-right: 8px;padding-top:6px;font-size: 18px;" catchtap="submit" wx:if="{{systemInfo.platform != 'ios'}}">发送</view>
 </view>
 <popup message="{{searchPopMessage}}" wx:if="{{showSearchPop}}" bindPopButtonClick="onPopButtonClick" data-q="{{q}}"></popup>
+<popup message="请不要在回答过程中切换到后台哦，否则可能造成中断～" wx:if="{{showHaveHideTip}}" bindPopButtonClick="onPopButtonClick2" confirmText="知道了" cancelText="不再提示"></popup>
 <view class="helpTip" wx:if="{{showHelpTip}}" catchlongtap="closeHelpTip">
 	<view class="tipTitle">使用帮助</view>
 	<view class="tipItem">1、输入问题，点击发送按钮开始聊天。请<text class="strengthenText">耐心等待</text>New Bing响应，在聊天过程中<text class="strengthenText">不建议切出小程序，可能会造成中断</text>；</view>
 	<view class="tipItem">2、长按对话框可对内容进行复制、发送至Memos、Flomo或为知笔记「<text class="strengthenText">需设置相应API</text>」；</view>
-	<view class="tipItem">3、长按头像可清除该条聊天；</view>
+	<view class="tipItem">3、长按头像可清除该条聊天，如无法清除，可尝试清除本机缓存；</view>
 	<view class="tipItem">4、点击头像可切换渲染(有些渲染出来的效果可能不佳)；</view>
 	<view class="tipItem">5、点击对话框右上方的圆点「<text style="display: inline-block;height: 1em;width: 1em;border-radius: 50%;background-color: lightgray;vertical-align:middle;"></text>」可进行收藏操作；
 	</view>
-	<view class="tipItem">6、发送<text catchtap="sendResetConversation" class="strengthenTextUnderline">重新对话！</text>可开启新一轮对话；</view>
-	<view class="tipItem">7、请<text class="strengthenText">文明提问，不要试图挑战道德及法律底线</text>，可能被关小黑屋！</view>
-	<view class="tipItem">8、使用过程中有任何的建议或意见欢迎到<button open-type="contact" session-from="sessionFrom" style="padding:0;width:2em;display:inline;background-color: #ffffff;line-height: 1.6em;border: none;font-size: 1em;" class="strengthenTextUnderline">客服</button>反馈，如果觉得还不错可以添加到收藏哦😊</view>
+	<view class="tipItem" wx:if="{{chatType == 'bing'}}">6、发送<text catchtap="sendResetConversation" class="strengthenTextUnderline">重新对话！</text>可开启新一轮对话；
+	</view>
+	<view class="tipItem">{{chatType == 'bing' ? 7: 6}}、请<text class="strengthenText">文明提问，不要试图挑战道德及法律底线</text>，可能被关小黑屋！</view>
+	<view class="tipItem">{{chatType == 'bing' ? 8: 7}}、使用过程中有任何的建议或意见欢迎到<button open-type="contact" session-from="sessionFrom" style="padding:0;width:2em;display:inline;background-color: #ffffff;line-height: 1.6em;border: none;font-size: 1em;" class="strengthenTextUnderline">客服</button>反馈，如果觉得还不错可以添加到收藏哦😊</view>
 	<view class="tipBtn" catchtap="closeHelpTip"><text class="tipBtnText">知道了</text></view>
 </view>

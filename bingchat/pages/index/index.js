@@ -7,25 +7,7 @@ import {
 } from "../../config";
 
 const initHeight = systemInfo.platform == "ios" ? 15 : 5;
-// 是否使用websocket请求
-var useWebsocket = true;
-// try {
-// 	var notuseWebsocket = wx.getStorageSync("notuseWebsocket")
-// 	if (notuseWebsocket) {
-// 		useWebsocket = false
-// 	}
-// } catch (e) {
-// 	useWebsocket = true
-// }
-// var showHelpTip = false;
-// try {
-//   var closeHelpTip = wx.getStorageSync("closeHelpTip");
-//   if (closeHelpTip) {
-//     showHelpTip = false;
-//   }
-// } catch (e) {
-//   showHelpTip = true;
-// }
+
 var showTopTip = true;
 
 try {
@@ -43,15 +25,6 @@ function inputPop() {
 // 自增对话
 var autoIncrConversation = 0;
 
-// 默认采用new bing
-var chatType = "bing";
-try {
-  if (wx.getStorageSync("usechatgpt")) {
-    chatType = "chatgpt";
-  }
-} catch (e) {
-  chatType = "bing";
-}
 // 对话模式
 var chatStyleList = ["creative", "balanced", "precise"];
 var chatStyle = chatStyleList[0];
@@ -97,6 +70,8 @@ function getNow() {
 
 const app = getApp();
 const robAvatar = "../../image/bing-avatar.png";
+const chatgptAvatar = "../../image/chatgpt.png";
+const bardAvatar = "../../image/bard-avatar.png";
 const personAvatar = "../../image/person.jpeg";
 
 Page({
@@ -111,10 +86,10 @@ Page({
       socket: null,
       isOpen: false,
     },
-    useWebsocket: useWebsocket,
+    useWebsocket: true,
     showSearchPop: false,
     searchPopMessage: "",
-    chatType: chatType,
+    chatType: app.globalData.chatType,
     chatStyle: chatStyle,
     chatStyleBg: {
       creative: "#62102e",
@@ -125,6 +100,7 @@ Page({
     showHelpTip: false,
     loadData: true,
     showTopTip: showTopTip,
+    showHaveHideTip: false,
   },
   inputFocus(e) {
     if (inputPop()) {
@@ -169,16 +145,29 @@ Page({
   },
   onShow() {
     // 切换title
-    this.switchTitle();
+    var that = this;
+    that.switchTitle();
+    wx.getStorage({
+      key: "showHaveHideTip",
+      success: (res) => {
+        that.setData({
+          showHaveHideTip: true,
+        });
+      },
+    });
   },
   switchTitle: function () {
     if (this.data.chatType == "bing") {
       wx.setNavigationBarTitle({
         title: "New Bing",
       });
-    } else {
+    } else if (this.data.chatType == "chatgpt") {
       wx.setNavigationBarTitle({
         title: "ChatGPT",
+      });
+    } else {
+      wx.setNavigationBarTitle({
+        title: "Google Bard",
       });
     }
   },
@@ -187,6 +176,36 @@ Page({
     if (cht.data.chatList.length > 1 && !this.data.textareaFocus) {
       cht.setData({
         scrollId: "item" + (cht.data.chatList.length - 2),
+      });
+    }
+  },
+  onUnload() {
+    if (this.data.searching) {
+      var that = this;
+      wx.getStorage({
+        key: "neverShowHaveHideTip",
+        fail: (e) => {
+          that.setData({
+            showHaveHideTip: true,
+          });
+          wx.setStorage({
+            key: "showHaveHideTip",
+            data: 1,
+          });
+        },
+      });
+    }
+  },
+  onHide() {
+    if (this.data.searching) {
+      var that = this;
+      wx.getStorage({
+        key: "neverShowHaveHideTip",
+        fail: (e) => {
+          that.setData({
+            showHaveHideTip: true,
+          });
+        },
       });
     }
   },
@@ -214,6 +233,11 @@ Page({
         // 聊天方式不同，关闭websocket
         if (chatType != this.data.chatType) {
           this.onCancelReceive();
+          wx.setStorage({
+            key: "selectedChatType",
+            data: chatType,
+          });
+          app.globalData.chatType = chatType;
         }
       }
       if (options["chatStyle"]) {
@@ -279,7 +303,12 @@ Page({
   sendHttpRequest: function (content) {
     var that = this;
     var cht = this.selectComponent("#chat-id");
-    var api = that.data.chatType == "bing" ? "/chat" : "/openai_chat";
+    var api = "/chat";
+    if (that.data.chatType == "chatgpt") {
+      api = "/openai_chat";
+    } else if (that.data.chatType == "bard") {
+      api = "/bard";
+    }
     app.getSid((sid) => {
       doRequest(api, "POST", {
         q: content,
@@ -467,8 +496,12 @@ Page({
     if (pop) {
       cht.data.chatList.pop();
     }
-    var rAvatar =
-      this.data.chatType == "bing" ? robAvatar : "../../image/chatgpt.png";
+    var rAvatar = robAvatar;
+    if (this.data.chatType == "chatgpt") {
+      rAvatar = chatgptAvatar;
+    } else if (this.data.chatType == "bard") {
+      rAvatar = bardAvatar;
+    }
     cht.data.chatList.push({
       type: role,
       avatarUrl: role == "rob" ? rAvatar : personAvatar,
@@ -516,8 +549,12 @@ Page({
     this.submitContent(content);
   },
   onShareAppMessage() {
-    var title =
-      this.data.chatType == "bing" ? "New Bing Bot，聊你想聊！" : "ChatGPT Bot";
+    var title = "New Bing Bot，聊你想聊！";
+    if (this.data.chatType == "chatgpt") {
+      title = "ChatGPT Bot";
+    } else if (this.data.chatType == "bard") {
+      title = "Google Bard Bot";
+    }
     var content = this.data.content.trim();
     if (content.length > 0) {
       title = content;
@@ -533,6 +570,12 @@ Page({
         }
       }
     }
+    var imageUrl = "../../image/newBing.png";
+    if (this.data.chatType == "chatgpt") {
+      imageUrl = "../../image/chatgptShare.png";
+    } else if (this.data.chatType == "bard") {
+      imageUrl = "../../image/bard.png";
+    }
     return {
       title: title,
       path:
@@ -542,10 +585,7 @@ Page({
         this.data.chatType +
         "&chatStyle=" +
         this.data.chatStyle,
-      imageUrl:
-        this.data.chatType == "bing"
-          ? "../../image/newBing.png"
-          : "../../image/chatgptShare.png",
+      imageUrl: imageUrl,
     };
   },
   onShareTimeline: function () {
@@ -572,7 +612,12 @@ Page({
     }
     var that = this;
     var cht = this.selectComponent("#chat-id");
-    var apiPath = that.data.chatType == "bing" ? "/chat" : "/ws_openai_chat";
+    var apiPath = "/chat";
+    if (that.data.chatType == "chatgpt") {
+      apiPath = "/ws_openai_chat";
+    } else if (that.data.chatType == "bard") {
+      apiPath = "/ws_bard";
+    }
     const socket = wx.connectSocket({
       url: SERVER_WSS_HOST + apiPath,
       fail: function () {
@@ -824,9 +869,18 @@ Page({
           ),
           icon: "none",
         });
+        if (that.data.chatType == "bard") {
+          wx.showToast({
+            title: "Bard不需要选择模式",
+            icon: "none",
+          });
+          return;
+        }
         var chatStyle = chatStyleList[res.tapIndex];
         if (that.data.chatStyle != chatStyle) {
-          that.resetConversation();
+          if (that.data.chatType == "bing") {
+            that.resetConversation();
+          }
           that.setData({
             chatStyle: chatStyle,
           });
@@ -843,16 +897,10 @@ Page({
     var cht = this.selectComponent("#chat-id");
     var itemList = ["设置 🔨 ", "显示帮助", "跳转收藏", "清除聊天"];
     if (
-      (app.globalData["saved"] && app.globalData["saved"] == 1) ||
-      that.data.chatType == "chatgpt"
+      (app.globalData["saved"] && app.globalData["saved"] >= 1) ||
+      that.data.chatType != "bing"
     ) {
-      itemList = [
-        "设置 🔨 ",
-        "显示帮助",
-        "跳转收藏",
-        "清除聊天",
-        that.data.chatType == "bing" ? "切换成ChatGPT" : "切换成New Bing",
-      ];
+      itemList = ["设置 🔨 ", "显示帮助", "跳转收藏", "清除聊天", "聊天渠道"];
     }
     wx.showActionSheet({
       itemList: itemList,
@@ -998,13 +1046,13 @@ Page({
                       systemInfo.platform != "devtools"
                     ) {
                       oldUrl =
-                        "抱歉，电脑版不支持在此输入，请将API地址以下面的格式发送到聊天来完成设置:\nwiz_api#https://${host}/ks/note/create/${kbGuid}/${token} 注意，将${host}、${kbGuid}和${token}是需要替换的变量。";
+                        "抱歉，电脑版不支持在此输入，请将API地址以下面的格式发送到聊天来完成设置:\nwiz_api#https://ks.wiz.cn/ks/note/create/${kbGuid}/${token} 注意，${kbGuid}和${token}是需要替换的变量。";
                     }
                   }
                   wx.showModal({
                     title: "请输入为知笔记的API地址",
                     placeholderText:
-                      "https://${host}/ks/note/create/${kbGuid}/${token}",
+                      "https://ks.wiz.cn/ks/note/create/${kbGuid}/${token}",
                     content: oldUrl,
                     editable: true,
                     success(res) {
@@ -1075,35 +1123,44 @@ Page({
         } else if (res.tapIndex == 10) {
           //that.switchRequestMethod()
         } else if (res.tapIndex == 4) {
-          if (that.data.chatType == "chatgpt") {
-            wx.removeStorage({
-              key: "usechatgpt",
-            });
-            that.setData({
-              chatType: "bing",
-            });
-            wx.showToast({
-              title: "已切换成New Bing",
-              icon: "none",
-            });
-          } else {
-            wx.setStorage({
-              key: "usechatgpt",
-              data: 1,
-            });
-            that.setData({
-              chatType: "chatgpt",
-            });
-            wx.showToast({
-              title: "已切换成ChatGPT",
-              icon: "none",
-            });
+          var items = ["New Bing"];
+          if (app.globalData["saved"] & 1) {
+            items.push("ChatGPT");
           }
-          // 关闭websocket
-          that.onCancelReceive();
-          setTimeout(() => {
-            that.switchTitle();
-          }, 100);
+          if (app.globalData["saved"] & 2) {
+            items.push("Google Bard");
+          }
+          wx.showActionSheet({
+            itemList: items,
+            success: (res) => {
+              var oldChatType = that.data.chatType;
+              var chatType = "bing";
+              if (res.tapIndex == 1) {
+                if (items[1] == "ChatGPT") {
+                  chatType = "chatgpt";
+                } else {
+                  chatType = "bard";
+                }
+              } else if (res.tapIndex == 2) {
+                chatType = "bard";
+              }
+              that.setData({
+                chatType: chatType,
+              });
+              wx.setStorage({
+                key: "selectedChatType",
+                data: chatType,
+              });
+              app.globalData.chatType = chatType;
+              if (oldChatType != chatType) {
+                // 关闭websocket
+                that.onCancelReceive();
+                setTimeout(() => {
+                  that.switchTitle();
+                }, 100);
+              }
+            },
+          });
         }
       },
     });
@@ -1153,12 +1210,28 @@ Page({
     });
   },
   sendResetConversation: function () {
-    this.submitContent("重新对话！");
+    if (this.data.chatType == "bing") {
+      this.submitContent("重新对话！");
+    }
     this.setData({
       showHelpTip: false,
     });
   },
   catchtouchmove: function (e) {
     console.log(e);
+  },
+  onPopButtonClick2: function (e) {
+    this.setData({
+      showHaveHideTip: false,
+    });
+    wx.removeStorage({
+      key: "showHaveHideTip",
+    });
+    if (e.detail.t === "cancel") {
+      wx.setStorage({
+        key: "neverShowHaveHideTip",
+        data: 1,
+      });
+    }
   },
 });

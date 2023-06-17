@@ -3,4 +3,5 @@ page {
   font-size: 14.5px;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
     "Helvetica Neue", STHeiti, "Microsoft Yahei", Tahoma, Simsun, sans-serif !important;
+  -webkit-tap-highlight-color: #00000000;
 }
