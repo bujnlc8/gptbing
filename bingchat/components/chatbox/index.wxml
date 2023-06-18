@@ -7,7 +7,7 @@
 		<view class="chat-item left" wx:if="{{item.type != 'man'}}" id="msg-{{index}}">
 			<image class="avatar" src="{{item.avatarUrl}}" style="display: flex;" catchlongpress="clearChat" data-index="{{index}}" catchtap="showOriginContent" data-index="{{index}}"></image>
 			<view class="chat-box" style="margin-left: 12px;">
-				<view style="display: flex;flex-direction: row;align-items: center;min-width: 200px;"><text class="dt" style="flex: 2;">{{item.dt}}</text>
+				<view style="display: flex;flex-direction: row;align-items: center;min-width: 150px;"><text class="dt" style="flex: 5;">{{item.dt}}</text>
 					<view wx:if="{{item.num_in_conversation > 0 || (!receiveData && item.originContent != '搜索中🔍...')}}" style="display:flex;justify-content:flex-end; flex: 1;align-items: center;"><text class="conversation_num {{item.collected ? 'conversation_num_collected': ''}}" catchtap="operateCollect" data-index="{{index}}">{{item.num_in_conversation > 0 ? item.num_in_conversation : ''}}</text></view>
 				</view>
 				<view class="content bg-white" catchlongpress="copyContent" data-index="{{index}}" catchtap="{{tools.indexOf(item.originContent, '```markdown') ? 'renderMd': ''}}">

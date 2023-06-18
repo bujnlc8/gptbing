@@ -60,10 +60,10 @@ Component({
         var host = url.split("/").splice(0, 3).join("/");
         var title = k
           .slice(2)
-          .join("")
+          .join(" ")
           .replaceAll('"', "")
           .replaceAll("\\", "");
-        if (url) {
+        if (url && i) {
           res.push({
             i,
             url,

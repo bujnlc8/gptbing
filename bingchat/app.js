@@ -10,10 +10,6 @@ App({
         that.globalData.chatType = res.data;
       },
     });
-    // this.getSid((sid) => {
-    //   console.log(sid);
-    // });
-    // this.upload_conversation();
     if (that.globalData.sid) {
       that.upload_cache_conversation(that.globalData.sid);
     } else {
@@ -60,6 +56,7 @@ App({
           sid: sidPrefix + sid,
           conversations: conversations,
         }).then((res) => {
+          that.globalData["saved"] = res.data["saved"];
           console.log(
             "upload " + conversations.length + " conversations success!"
           );
@@ -79,10 +76,11 @@ App({
             })
               .then((data) => {
                 if (data.statusCode != 200) {
-                  callback("");
+                  callback("anonymous");
                   return;
                 }
                 that.globalData.sid = data.data.data.openid;
+                that.globalData.saved = data.data.data.saved;
                 wx.setStorageSync("sid1", that.globalData.sid);
                 callback(data.data.data.openid);
               })

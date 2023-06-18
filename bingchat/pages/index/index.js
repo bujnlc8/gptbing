@@ -1143,6 +1143,10 @@ Page({
                 }
               } else if (res.tapIndex == 2) {
                 chatType = "bard";
+                wx.showToast({
+                  title: "Bard暂不支持中文",
+                  icon: "none",
+                });
               }
               that.setData({
                 chatType: chatType,
@@ -1153,6 +1157,22 @@ Page({
               });
               app.globalData.chatType = chatType;
               if (oldChatType != chatType) {
+                if (chatType == "bard") {
+                  wx.showToast({
+                    title: "已切换成Bard，暂不支持中文",
+                    icon: "none",
+                  });
+                } else if (chatType == "bing") {
+                  wx.showToast({
+                    title: "已切换成New Bing",
+                    icon: "none",
+                  });
+                } else if (chatType == "chatgpt") {
+                  wx.showToast({
+                    title: "已切换成ChatGPT",
+                    icon: "none",
+                  });
+                }
                 // 关闭websocket
                 that.onCancelReceive();
                 setTimeout(() => {

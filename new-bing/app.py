@@ -7,18 +7,18 @@ import os
 import pickle
 import re
 import traceback
+import urllib
 from collections import defaultdict
 from datetime import datetime, timedelta
-from Bard import Chatbot as BardBot
 
 import aiohttp
 import openai
-import urllib
 import requests
 import tiktoken
 from sanic import Sanic
 from sanic.response import json
 
+from Bard import Chatbot as BardBot
 from BingImageCreator import async_image_gen
 from common import DAY_LIMIT, FORBIDDEN_TIP, INTERNAL_ERROR, NO_ACCESS, OVER_DAY_LIMIT, \
     SERVICE_NOT_AVALIABLE
@@ -407,7 +407,9 @@ async def reset(request):
 async def openid(request):
     code = request.args.get('code')
     url = WX_URL % (APPID, APPSECRET, code)
-    return json({'data': requests.get(url).json()})
+    data = requests.get(url).json()
+    data['saved'] = show_chatgpt(data['openid'])
+    return json({'data': data})
 
 
 # #########################################以下是openid接口##################################
@@ -657,6 +659,8 @@ async def ws_bard(_, ws):
             logger.info('[bard] Websocket receive data: %s', data)
             sid = data['sid']
             if not (show_chatgpt(sid) & 2):
+                raise Exception(NO_ACCESS)
+            if check_blocked(sid):
                 raise Exception(NO_ACCESS)
             q = data['q']
             bot = await get_bard_bot(sid)
