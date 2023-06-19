@@ -7,6 +7,7 @@ import json
 import os
 import random
 import ssl
+import time
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -392,22 +393,37 @@ class _ChatHub:
                 conversation_style=conversation_style,
                 options=options,
             )
+        else:
+            self.request.struct['arguments'][0]['message']['text'] = prompt
         await self.wss.send_str(_append_identifier(self.request.struct))
         logger.info('[Request] send data: %s', _append_identifier(self.request.struct))
         final = False
         draw = False
         resp_txt = ''
         resp_txt_no_link = ''
+        retry_count = 5
+        last_t = 0
         while not final:
             msg = await self.wss.receive(timeout=600)
             if msg.data is None:
-                logger.error('[Response] message data is None, %s, %s, %s', msg, msg.type, msg.data)
-                raise Exception('Unexpected message type: %s' % msg.type)
+                retry_count -= 1
+                if retry_count == 0:
+                    logger.error('[Response] message data is None, %s, %s, %s', msg, msg.type, msg.data)
+                    raise Exception('Unexpected message type: %s' % msg.type)
+                continue
             if type(msg.data) is int:
                 logger.error('[Response] receive int response, %s, %s, %s', msg, msg.type, msg.data)
                 raise Exception('Unexpected message type: %s' % msg.type)
             objects = msg.data.split(DELIMITER)
             for obj in objects:
+                t = int(time.time())
+                if t % 5 == 0 and t > last_t:
+                    try:
+                        last_t = t
+                        await self.wss.send_str(_append_identifier({'type': 6}))
+                        logger.info('Send message type 6 to keep alive.')
+                    except:
+                        pass
                 if not obj:
                     continue
                 response = json.loads(obj)

@@ -64,10 +64,18 @@ HIDDEN_TEXTS = [
 def wrap_q(q):
     if q.startswith('刚刚发生了点错误'):
         return q
-    return '刚刚发生了点错误，请再耐心回答以下问题：' + q
+    return '刚刚发生了点错误，请再次耐心地回答以下问题：' + q
 
 
-STRIP_WORDS = ['你好，这是必应。', '你好，这是Bing。', '您好，这是必应。', '您好，这是Bing。']
+def get_strip_words():
+    res = []
+    for prefix in ['你好，', '您好，']:
+        for suffix in ['这里是Bing。', '这里是必应。', '这是Bing。', '这是必应。']:
+            res.append('{}{}'.format(prefix, suffix))
+    return res
+
+
+STRIP_WORDS = get_strip_words()
 
 
 def strip_hello(text):
@@ -87,7 +95,7 @@ def check_hidden(text):
 
 def get_cookie_file(sid, cookie_files, reset=False):
     # 优先获取最后一个
-    if not reset and show_chatgpt(sid) == 3:
+    if not reset and show_chatgpt(sid) & 1:
         return cookie_files[-1]
     # 根据sid相加取余算出一个数
     total_cookie_num = len(cookie_files) - 1
@@ -136,6 +144,26 @@ def show_chatgpt(sid):
     return 2
 
 
+def get_show_channel(sid, authority=0):
+    res = [{
+        'name': 'New Bing',
+        'value': 'bing'
+    }]
+    if not authority:
+        authority = show_chatgpt(sid)
+    if authority & 1:
+        res.append({
+            'name': 'ChatGPT',
+            'value': 'chatgpt'
+        })
+    if authority & 2:
+        res.append({
+            'name': 'Google Bard',
+            'value': 'bard'
+        })
+    return res
+
+
 def check_blocked(sid):
     for openid in conversation_ctr.get_blacklist():
         if openid.decode() in sid:
@@ -143,7 +171,6 @@ def check_blocked(sid):
 
 
 def make_response_data(status, text, suggests, message, num_in_conversation=-1, final=True):
-    text = strip_hello(text)
     if not text.strip():
         text = '实在抱歉，我现在无法回答这个问题。 我还能为您提供哪些帮助？'
     data = {
@@ -198,7 +225,7 @@ async def ask_bing(ws, sid, q, style, another_try=False):
                 await reset_conversation(sid, reset=True)
                 processed_data['data']['suggests'].append(q)
             if processed_data['data']['status'] == 'ProcessingMessage':
-                await asyncio.sleep(45)
+                await asyncio.sleep(60)
                 raise Exception(
                     'The last message is being processed. Please wait for a while before submitting further messages.'
                 )
@@ -223,7 +250,7 @@ async def ask_bing(ws, sid, q, style, another_try=False):
                 last_not_final_text = res
                 await ws.send(raw_json.dumps({
                     'final': final,
-                    'data': strip_hello(res),
+                    'data': res,
                 }))
 
 
@@ -232,7 +259,7 @@ def check_forbidden_words(sid, q):
     if forbid_words:
         data = make_response_data(
             'Success',
-            FORBIDDEN_TIP,
+            FORBIDDEN_TIP + '\n敏感词如下：' + '、'.join(['**{}**'.format(x) for x in forbid_words]),
             [],
             '',
             -1,
@@ -243,13 +270,13 @@ def check_forbidden_words(sid, q):
 
 def check_limit(sid):
     incr = conversation_ctr.get_day_limit(sid)
-    if show_chatgpt(sid) == 3:
+    if show_chatgpt(sid) & 1:
         return False
     return True if incr > DAY_LIMIT else False
 
 
-@app.websocket('/bing/chat')
-async def ws_chat(_, ws):
+@app.websocket('/bing/ws_common')
+async def ws_common(_, ws):
     while True:
         msg, sid, q, style, try_times = '', '', '', '', 0
         try:
@@ -268,6 +295,7 @@ async def ws_chat(_, ws):
             # 发生错误，重试10次
             try_times = 10
             await ask_bing(ws, sid, q, style)
+            msg = ''
         except KeyError:
             msg = SERVICE_NOT_AVALIABLE
         except Exception as e:
@@ -284,11 +312,13 @@ async def ws_chat(_, ws):
                     another_try = False
                     if 'Cannot write to closing transport' in msg:
                         another_try = True
+                    if 'Unexpected message type' in msg:
+                        another_try = True
                     msg = ''
                     await ask_bing(
                         ws,
                         sid,
-                        wrap_q(q),
+                        wrap_q(q) if '现已开启新一轮对话' not in msg else q,
                         style,
                         another_try=another_try,
                     )
@@ -317,7 +347,7 @@ async def do_chat(request):
     )
 
 
-async def process_data(res, q, sid, auto_reset=None):
+async def process_data(res, q, sid, auto_reset=None, auto_new_talk=True):
     text = ''
     suggests = []
     status = res['item']['result']['value']
@@ -360,6 +390,8 @@ async def process_data(res, q, sid, auto_reset=None):
     msg = res['item']['result']['message'] if 'message' in res['item']['result'] else ''
     if auto_reset and ('New topic' in text or 'has expired' in msg):
         await reset_conversation(sid)
+        if auto_new_talk:
+            raise Exception('Thanks for this conversation! But I\'ve reached my limit. 现已开启新一轮对话。')
         status = 'Success'
         text = 'Thanks for this conversation! But I\'ve reached my limit. 现已开启新一轮对话。'
         if q not in suggests:
@@ -389,17 +421,21 @@ async def chat(request):
         return json(make_response_data('Success', resp, [], ''))
     res = await do_chat(request)
     auto_reset = request.json.get('auto_reset', '')
-    data = await process_data(res, request.json.get('q'), sid, auto_reset)
+    data = await process_data(res, request.json.get('q'), sid, auto_reset, auto_new_talk=False)
     if data['data']['status'] == 'Throttled':
         await reset_conversation(sid, reset=True)
         res = await do_chat(request)
-        data = await process_data(res, request.json.get('q'), sid, auto_reset)
+        data = await process_data(res, request.json.get('q'), sid, auto_reset, auto_new_talk=False)
     return json(data)
 
 
 @app.route('/bing/reset')
 async def reset(request):
-    await reset_conversation(request.args.get('sid'))
+    sid = request.args.get('sid')
+    if not sid:
+        raise Exception('参数错误')
+    if not check_blocked(sid):
+        await reset_conversation(sid)
     return json({'data': ''})
 
 
@@ -408,7 +444,9 @@ async def openid(request):
     code = request.args.get('code')
     url = WX_URL % (APPID, APPSECRET, code)
     data = requests.get(url).json()
-    data['saved'] = show_chatgpt(data['openid'])
+    authority = show_chatgpt(data['openid'])
+    data['saved'] = authority
+    data['channel'] = get_show_channel(data['openid'], authority=authority)
     return json({'data': data})
 
 
@@ -593,11 +631,15 @@ async def last_sync_time(request):
 
 @app.post('/bing/save')
 async def save(request):
-    if check_blocked(request.json.get('sid')) or 'servicewechat.com/wxee7496be5b68b740' not in request.headers.get(
-            'referer', ''):
+    sid = request.json.get('sid')
+    if check_blocked(sid) or 'servicewechat.com/wxee7496be5b68b740' not in request.headers.get('referer', ''):
         raise Exception(NO_ACCESS)
-    conversation_ctr.save(request.json.get('sid'), request.json.get('conversations'))
-    return json({'saved': show_chatgpt(request.json.get('sid'))})
+    conversation_ctr.save(sid, request.json.get('conversations'))
+    authority = show_chatgpt(sid)
+    return json({
+        'saved': authority,
+        'channel': get_show_channel(sid, authority=authority),
+    })
 
 
 @app.route('/bing/query')
@@ -693,7 +735,7 @@ def process_content(content):
     for k, v in matches:
         content = content.replace(k, '{}({})'.format(k, v))
     content = content.replace(' ```', '```').replace(' ```', '```')
-    return content
+    return strip_hello(content)
 
 
 def put_refresh(url, token):
@@ -770,15 +812,15 @@ async def after_server_stop(*_):
         try:
             with open('/sanic/sessions/{}.openai'.format(sid), 'wb') as f:
                 pickle.dump(conversations, f)
-            logger.info('Save %s openai session success.', sid)
+            logger.info('Save %s Openai session success.', sid)
         except:
-            logger.error('Save %s openai session error.', sid, exc_info=True)
+            logger.error('Save %s Openai session error.', sid, exc_info=True)
     for sid, bot in bard_bots.items():
         try:
             await bot.save_conversation()
-            logger.info('Save %s bard session success.', sid)
+            logger.info('Save %s Bard session success.', sid)
         except:
-            logger.error('Save %s bard session error.', sid, exc_info=True)
+            logger.error('Save %s Bard session error.', sid, exc_info=True)
 
 
 if __name__ == '__main__':

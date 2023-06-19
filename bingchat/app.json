@@ -1,8 +1,5 @@
 {
-  "pages": [
-    "pages/index/index",
-    "pages/collected/collected"
-  ],
+  "pages": ["pages/index/index", "pages/collected/collected"],
   "usingComponents": {
     "chat-box": "components/chatbox/index"
   },

@@ -69,10 +69,11 @@ function getNow() {
 }
 
 const app = getApp();
-const robAvatar = "../../image/bing-avatar.png";
+const bingAvatar = "../../image/bing-avatar.png";
 const chatgptAvatar = "../../image/chatgpt.png";
 const bardAvatar = "../../image/bard-avatar.png";
 const personAvatar = "../../image/person.jpeg";
+const commonAvatar = "../../image/bot.png";
 
 Page({
   data: {
@@ -157,19 +158,15 @@ Page({
     });
   },
   switchTitle: function () {
-    if (this.data.chatType == "bing") {
-      wx.setNavigationBarTitle({
-        title: "New Bing",
-      });
-    } else if (this.data.chatType == "chatgpt") {
-      wx.setNavigationBarTitle({
-        title: "ChatGPT",
-      });
-    } else {
-      wx.setNavigationBarTitle({
-        title: "Google Bard",
-      });
-    }
+    var title = "New Bing";
+    app.globalData.channel.forEach((k) => {
+      if (k["value"] == this.data.chatType) {
+        title = k["name"];
+      }
+    });
+    wx.setNavigationBarTitle({
+      title: title,
+    });
   },
   scrollBottom: function () {
     var cht = this.selectComponent("#chat-id");
@@ -297,64 +294,8 @@ Page({
         sid: sidPrefix + sid,
         t: new Date().getTime(),
         style: that.data.chatStyle,
+        channel: that.data.chatType,
       });
-    });
-  },
-  sendHttpRequest: function (content) {
-    var that = this;
-    var cht = this.selectComponent("#chat-id");
-    var api = "/chat";
-    if (that.data.chatType == "chatgpt") {
-      api = "/openai_chat";
-    } else if (that.data.chatType == "bard") {
-      api = "/bard";
-    }
-    app.getSid((sid) => {
-      doRequest(api, "POST", {
-        q: content,
-        sid: sidPrefix + sid,
-        style: that.data.chatStyle,
-      })
-        .then((res) => {
-          try {
-            var robContent = "";
-            var suggests = [];
-            var num_in_conversation = -1;
-            if (res.statusCode != 200) {
-              robContent =
-                "抱歉，网络异常，请稍后重试 [" + res.statusCode + "]";
-              suggests.push(content);
-            } else {
-              robContent = that.processData(res.data, suggests, content);
-              num_in_conversation = res.data["data"]["num_in_conversation"];
-            }
-            that.pushStorageMessage(
-              cht,
-              robContent,
-              "rob",
-              suggests,
-              false,
-              true,
-              num_in_conversation
-            );
-          } catch (error) {
-            wx.showToast({
-              title: "fatal error",
-              icon: "error",
-            });
-            that.pushStorageMessage(
-              cht,
-              "发生致命错误😱",
-              "rob",
-              [],
-              false,
-              true
-            );
-          }
-        })
-        .catch((e) => {
-          that.pushStorageMessage(cht, e.errMsg, "rob", [], false, true);
-        });
     });
   },
   submitContent: function (content) {
@@ -496,8 +437,10 @@ Page({
     if (pop) {
       cht.data.chatList.pop();
     }
-    var rAvatar = robAvatar;
-    if (this.data.chatType == "chatgpt") {
+    var rAvatar = commonAvatar;
+    if (this.data.chatType == "bing") {
+      rAvatar = bingAvatar;
+    } else if (this.data.chatType == "chatgpt") {
       rAvatar = chatgptAvatar;
     } else if (this.data.chatType == "bard") {
       rAvatar = bardAvatar;
@@ -617,6 +560,8 @@ Page({
       apiPath = "/ws_openai_chat";
     } else if (that.data.chatType == "bard") {
       apiPath = "/ws_bard";
+    } else {
+      apiPath = "/ws_common";
     }
     const socket = wx.connectSocket({
       url: SERVER_WSS_HOST + apiPath,
@@ -897,7 +842,7 @@ Page({
     var cht = this.selectComponent("#chat-id");
     var itemList = ["设置 🔨 ", "显示帮助", "跳转收藏", "清除聊天"];
     if (
-      (app.globalData["saved"] && app.globalData["saved"] >= 1) ||
+      (app.globalData["channel"] && app.globalData["channel"].length > 1) ||
       that.data.chatType != "bing"
     ) {
       itemList = ["设置 🔨 ", "显示帮助", "跳转收藏", "清除聊天", "聊天渠道"];
@@ -1123,31 +1068,15 @@ Page({
         } else if (res.tapIndex == 10) {
           //that.switchRequestMethod()
         } else if (res.tapIndex == 4) {
-          var items = ["New Bing"];
-          if (app.globalData["saved"] & 1) {
-            items.push("ChatGPT");
-          }
-          if (app.globalData["saved"] & 2) {
-            items.push("Google Bard");
-          }
+          var items = [];
+          app.globalData.channel.forEach((k) => {
+            items.push(k["name"]);
+          });
           wx.showActionSheet({
             itemList: items,
             success: (res) => {
               var oldChatType = that.data.chatType;
-              var chatType = "bing";
-              if (res.tapIndex == 1) {
-                if (items[1] == "ChatGPT") {
-                  chatType = "chatgpt";
-                } else {
-                  chatType = "bard";
-                }
-              } else if (res.tapIndex == 2) {
-                chatType = "bard";
-                wx.showToast({
-                  title: "Bard暂不支持中文",
-                  icon: "none",
-                });
-              }
+              var chatType = app.globalData.channel[res.tapIndex]["value"];
               that.setData({
                 chatType: chatType,
               });
@@ -1162,14 +1091,10 @@ Page({
                     title: "已切换成Bard，暂不支持中文",
                     icon: "none",
                   });
-                } else if (chatType == "bing") {
+                } else {
                   wx.showToast({
-                    title: "已切换成New Bing",
-                    icon: "none",
-                  });
-                } else if (chatType == "chatgpt") {
-                  wx.showToast({
-                    title: "已切换成ChatGPT",
+                    title:
+                      "已切换成" + app.globalData.channel[res.tapIndex]["name"],
                     icon: "none",
                   });
                 }
