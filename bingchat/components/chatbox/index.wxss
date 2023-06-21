@@ -31,11 +31,12 @@
 
 .content {
   border-radius: 10px;
-  padding: 6px 10px 6px 10px;
+  padding: 6px;
   word-break: break-all;
   white-space: pre-wrap;
   margin-top: 6px;
-  line-height: 1.6em;
+  line-height: 1.6;
+  text-align: justify;
 }
 
 .bg-green {

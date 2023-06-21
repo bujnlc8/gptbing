@@ -41,6 +41,11 @@ Component({
         this.setData({
           height: systemInfo.windowHeight - 15,
         });
+      } else {
+        this.setData({
+          height:
+            systemInfo.windowHeight - (systemInfo.platform == "ios" ? 75 : 65),
+        });
       }
     },
   },

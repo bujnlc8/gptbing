@@ -1,8 +1,8 @@
 <view class="board" wx:if="{{showHelpTip || showSearchPop}}" catchtouchmove="catchtouchmove"></view>
 <view class="topTip" wx:if="{{showTopTip}}" catchtap="closeTopTip"><text class="tipText">长按页面空白处可弹出更多菜单！</text>
-	<icon type="clear" size="16" color="#62102e" style="position: fixed;right: 3px;top:8px;opacity: 0.2;"></icon>
+	<icon type="clear" size="14" color="#62102e" style="position: fixed;right: 3px;top:3px;opacity: 0.2;"></icon>
 </view>
-<chat-box id="chat-id" bindsuggestSubmit="onSuggestSubmit" bindcancelReceive="onCancelReceive" bindswitchRequestMethod="switchRequestMethod" catchlongpress="longPress" chatType="{{chatType}}" loadData="{{loadData}}" mode="normal" style="max-height: {{chatBoxHeight}}px"></chat-box>
+<chat-box id="chat-id" bindsuggestSubmit="onSuggestSubmit" bindcancelReceive="onCancelReceive" bindswitchRequestMethod="switchRequestMethod" catchlongpress="longPress" chatType="{{chatType}}" loadData="{{loadData}}" mode="normal" style="height: {{chatBoxHeight}}px"></chat-box>
 <view style="bottom:{{inputBottom}}px; border-radius: 12px;margin-left: 1%;z-index: 9000; width: 98%;min-height: 58px;position: fixed;background-color: #f4f6f8;display: flex;align-items:flex-start;justify-content: space-between;border: {{textareaFocus ? '1px': '0px'}} solid {{chatStyleBg[chatStyle]}};">
 	<textarea bindfocus="inputFocus" bindblur="inputBlur" value="{{content}}" adjust-position="{{false}}" focus="{{textareaFocus}}" maxlength="20000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder='请输入问题...' style="caret-color:{{chatStyleBg[chatStyle]}};padding: 6px;flex: 9;line-height: normal;" placeholder-style="color: {{textareaFocus ? chatStyleBg[chatStyle] : '#b4bbc4'}}" catchtap="focus" bindinput="inputData" catchlongpress="scrollBottom"></textarea>
 	<view style="background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-radius: 0 12px 12px 0;height: 50px;cursor: pointer;margin-right: 8px;padding-top:6px;font-size: 18px;" catchtap="submit" wx:if="{{systemInfo.platform != 'ios'}}">发送</view>
@@ -11,10 +11,10 @@
 <popup message="请不要在回答过程中切换到后台哦，否则可能造成中断～" wx:if="{{showHaveHideTip}}" bindPopButtonClick="onPopButtonClick2" confirmText="知道了" cancelText="不再提示"></popup>
 <view class="helpTip" wx:if="{{showHelpTip}}" catchlongtap="closeHelpTip">
 	<view class="tipTitle">使用帮助</view>
-	<view class="tipItem">1、输入问题，点击发送按钮开始聊天。请<text class="strengthenText">耐心等待</text>New Bing响应，在聊天过程中<text class="strengthenText">不建议切出小程序，可能会造成中断</text>；</view>
+	<view class="tipItem">1、输入问题，点击发送按钮开始聊天。请<text class="strengthenText">耐心等待响应，在聊天过程中不建议切出小程序，可能会造成中断</text>；</view>
 	<view class="tipItem">2、长按对话框可对内容进行复制、发送至Memos、Flomo或为知笔记「<text class="strengthenText">需设置相应API</text>」；</view>
 	<view class="tipItem">3、长按头像可清除该条聊天，如无法清除，可尝试清除本机缓存；</view>
-	<view class="tipItem">4、点击头像可切换渲染(有些渲染出来的效果可能不佳)；</view>
+	<view class="tipItem">4、点击头像可切换渲染「有些渲染出来的效果可能不佳」；</view>
 	<view class="tipItem">5、点击对话框右上方的圆点「<text style="display: inline-block;height: 1em;width: 1em;border-radius: 50%;background-color: lightgray;vertical-align:middle;"></text>」可进行收藏操作；
 	</view>
 	<view class="tipItem" wx:if="{{chatType == 'bing'}}">6、发送<text catchtap="sendResetConversation" class="strengthenTextUnderline">重新对话！</text>可开启新一轮对话；

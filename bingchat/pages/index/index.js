@@ -276,7 +276,7 @@ Page({
           robContent = "本轮对话已过期，请重新开始。";
           suggests.push(content);
         } else {
-          robContent = "抱歉，发生错误：" + msg;
+          robContent = "Ooops! 发生错误：" + msg;
           if (this.data.chatType == "bing") {
             suggests.push("重新对话！");
           }
@@ -560,7 +560,7 @@ Page({
       apiPath = "/ws_openai_chat";
     } else if (that.data.chatType == "bard") {
       apiPath = "/ws_bard";
-    } else {
+    } else if (that.data.chatType != "bing") {
       apiPath = "/ws_common";
     }
     const socket = wx.connectSocket({
@@ -600,6 +600,12 @@ Page({
       cht.setData({
         receiveData: false,
       });
+      if (code != 1000 && that.data.searching) {
+        wx.showToast({
+          title: "连接已断开",
+          icon: "none",
+        });
+      }
     });
     socket.onError((msg) => {
       console.log("Socket onError", msg);
@@ -695,6 +701,12 @@ Page({
         code: 1000,
         reason: "Page Unload",
       });
+      if (this.data.searching) {
+        wx.showToast({
+          title: "连接已断开",
+          icon: "none",
+        });
+      }
     }
   },
   inputData: function (e) {
@@ -897,7 +909,7 @@ Page({
                     systemInfo.platform != "android"
                   ) {
                     oldUrl =
-                      "抱歉，电脑版不支持在此输入，请将OpenApI地址以下面的格式发送到聊天来完成设置:\nmemos_openapi#http... 注意，将#后面的部分替换成真实地址，一般以http开头。";
+                      "PC端不支持在此输入，请将OpenApI地址以下面的格式发送到聊天来完成设置:\nmemos_openapi#http... 注意，将#后面的部分替换成真实地址，一般以http开头。";
                   }
                 }
                 wx.showModal({
@@ -911,7 +923,7 @@ Page({
                       if (!i) {
                         return;
                       }
-                      if (i.startsWith("抱歉，电脑版不支持")) {
+                      if (i.startsWith("PC端不支持")) {
                         return;
                       }
                       if (!i || !i.startsWith("http")) {
@@ -943,7 +955,7 @@ Page({
                       systemInfo.platform != "android"
                     ) {
                       oldUrl =
-                        "抱歉，电脑版不支持在此输入，请将API地址以下面的格式发送到聊天来完成设置:\nflomo_api#https://flomoapp.com... 注意，将#后面的部分替换成真实地址。";
+                        "PC端不支持在此输入，请将API地址以下面的格式发送到聊天来完成设置:\nflomo_api#https://flomoapp.com... 注意，将#后面的部分替换成真实地址。";
                     }
                   }
                   wx.showModal({
@@ -957,7 +969,7 @@ Page({
                         if (!i) {
                           return;
                         }
-                        if (i.startsWith("抱歉，电脑版不支持")) {
+                        if (i.startsWith("PC端不支持")) {
                           return;
                         }
                         if (!i || !i.startsWith("http")) {
@@ -991,7 +1003,7 @@ Page({
                       systemInfo.platform != "devtools"
                     ) {
                       oldUrl =
-                        "抱歉，电脑版不支持在此输入，请将API地址以下面的格式发送到聊天来完成设置:\nwiz_api#https://ks.wiz.cn/ks/note/create/${kbGuid}/${token} 注意，${kbGuid}和${token}是需要替换的变量。";
+                        "PC端不支持在此输入，请将API地址以下面的格式发送到聊天来完成设置:\nwiz_api#https://ks.wiz.cn/ks/note/create/${kbGuid}/${token} 注意，${kbGuid}和${token}是需要替换的变量。";
                     }
                   }
                   wx.showModal({
@@ -1006,7 +1018,7 @@ Page({
                         if (!i) {
                           return;
                         }
-                        if (i.startsWith("抱歉，电脑版不支持")) {
+                        if (i.startsWith("PC端不支持")) {
                           return;
                         }
                         if (!i || !i.startsWith("http")) {
@@ -1162,9 +1174,7 @@ Page({
       showHelpTip: false,
     });
   },
-  catchtouchmove: function (e) {
-    console.log(e);
-  },
+  catchtouchmove: function (e) {},
   onPopButtonClick2: function (e) {
     this.setData({
       showHaveHideTip: false,

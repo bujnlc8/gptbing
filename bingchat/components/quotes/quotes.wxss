@@ -4,7 +4,7 @@
   flex-wrap: wrap;
   background-color: #f4f6f8;
   border-radius: 0px 10px 0px 10px;
-  padding: 6px 10px 6px 10px;
+  padding: 6px;
   margin-top: -10px;
 }
 
@@ -13,11 +13,13 @@
   display: inline-block;
   padding: 3px;
   border-radius: 5px;
-  margin-right: 6px;
   color: #123bb6;
   margin-bottom: 6px;
   font-size: 12px;
   cursor: pointer;
   word-break: break-all;
-  min-width: 100%;
+  min-width: calc(100% - 6px);
+}
+.quote-item:last-child {
+  margin-bottom: 0px;
 }

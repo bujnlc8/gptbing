@@ -230,7 +230,7 @@ async def ask_bing(ws, sid, q, style, another_try=False):
                     'The last message is being processed. Please wait for a while before submitting further messages.'
                 )
             if processed_data['data']['status'] == 'InternalError':
-                if last_not_final_text and not last_not_final_text.startswith('Searching the web for'):
+                if last_not_final_text and not last_not_final_text.startswith('正在搜索'):
                     processed_data = make_response_data(
                         'Success', last_not_final_text, [], '', processed_data['data']['num_in_conversation']
                     )
@@ -246,6 +246,7 @@ async def ask_bing(ws, sid, q, style, another_try=False):
                 'data': processed_data
             }))
         else:
+            res = res.replace('Searching the web for', '正在搜索').replace('Generating answers for you', '正在为你生成答案')
             if res and not check_hidden(res):
                 last_not_final_text = res
                 await ws.send(raw_json.dumps({
@@ -302,7 +303,7 @@ async def ws_common(_, ws):
             logger.error('%s', traceback.format_exc())
             msg = str(e) or SERVICE_NOT_AVALIABLE
         if msg:
-            while try_times and msg:
+            while try_times and msg and 'sanic.exceptions' not in msg:
                 try:
                     try_times -= 1
                     if OVER_DAY_LIMIT in msg or NO_ACCESS in msg or 'Your prompt has been blocked by Bing' in msg:
@@ -314,7 +315,6 @@ async def ws_common(_, ws):
                         another_try = True
                     if 'Unexpected message type' in msg:
                         another_try = True
-                    msg = ''
                     await ask_bing(
                         ws,
                         sid,
@@ -322,6 +322,7 @@ async def ws_common(_, ws):
                         style,
                         another_try=another_try,
                     )
+                    msg = ''
                 except KeyError:
                     msg = SERVICE_NOT_AVALIABLE
                 except Exception as e:
