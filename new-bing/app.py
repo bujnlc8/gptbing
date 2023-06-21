@@ -15,6 +15,7 @@ import aiohttp
 import openai
 import requests
 import tiktoken
+from easy_ernie import FastErnie
 from sanic import Sanic
 from sanic.response import json
 
@@ -45,6 +46,7 @@ app.config.WEBSOCKET_PING_TIMEOUT = 60
 
 bots = {}
 bard_bots = {}
+baidu_bots = {}
 
 # openai conversation
 OPENAI_CONVERSATION = defaultdict(lambda: [])
@@ -155,6 +157,10 @@ def get_show_channel(sid, authority=0):
         res.append({
             'name': 'ChatGPT',
             'value': 'chatgpt'
+        })
+        res.append({
+            'name': '文心一言',
+            'value': 'baidu'
         })
     if authority & 2:
         res.append({
@@ -276,8 +282,8 @@ def check_limit(sid):
     return True if incr > DAY_LIMIT else False
 
 
-@app.websocket('/bing/ws_common')
-async def ws_common(_, ws):
+@app.websocket('/bing/chat')
+async def ws_chat(_, ws):
     while True:
         msg, sid, q, style, try_times = '', '', '', '', 0
         try:
@@ -729,6 +735,76 @@ async def ws_bard(_, ws):
             }))
 
 
+BAIDUID = os.environ.get('BAIDUID')
+BDUSS_BFESS = os.environ.get('BDUSS_BFESS')
+
+
+def get_channel_bot(sid, channel) -> BardBot:
+    if channel == 'baidu':
+        if sid in baidu_bots:
+            return baidu_bots[sid]
+        bot = FastErnie(BAIDUID, BDUSS_BFESS)
+        try:
+            file = '/sanic/sessions/{}.baidu'.format(sid)
+            with open(file, 'rb') as f:
+                sessionid = pickle.load(f)['sessionid']
+                bot.sessionId = sessionid
+                logger.info('Reload %s baidu session success!', sid)
+                os.remove(file)
+        except:
+            pass
+        baidu_bots[sid] = bot
+        return bot
+
+
+@app.websocket('/bing/ws_common')
+async def ws_common(_, ws):
+    while True:
+        msg, sid, q = '', '', ''
+        try:
+            data = await ws.recv()
+            if not data:
+                continue
+            data = raw_json.loads(data)
+            channel = data['channel']
+            logger.info('[%s] Websocket receive data: %s', channel, data)
+            sid = data['sid']
+            if not (show_chatgpt(sid) & 1):
+                raise Exception(NO_ACCESS)
+            if check_blocked(sid):
+                raise Exception(NO_ACCESS)
+            q = data['q']
+            bot = get_channel_bot(sid, channel)
+            if channel == 'baidu':
+                for message in bot.askStream(q):
+                    if not message:
+                        continue
+                    text = message['answer']
+                    if message['urls']:
+                        text += '\n' + '\n'.join(['![]({})'.format(x) for x in message['urls']])
+                    if message['done']:
+                        await ws.send(
+                            raw_json.dumps({
+                                'final': True,
+                                'data': make_response_data('Success', text, [], '')
+                            })
+                        )
+                    else:
+                        await ws.send(raw_json.dumps({
+                            'final': False,
+                            'data': text,
+                        }))
+            else:
+                raise Exception('不支持的渠道')
+        except Exception as e:
+            logger.error('%s', traceback.format_exc())
+            msg = str(e) or SERVICE_NOT_AVALIABLE
+            await ws.send(raw_json.dumps({
+                'final': True,
+                'data': make_response_data('Error', msg, [q], msg)
+            }))
+
+
 def process_content(content):
     matches = re.findall(r'(\[\d+\]):\s(http[^"]*)\s', content)
     content = re.sub(r'\[\d+\]:\shttp.*', '', content)
@@ -822,6 +898,16 @@ async def after_server_stop(*_):
             logger.info('Save %s Bard session success.', sid)
         except:
             logger.error('Save %s Bard session error.', sid, exc_info=True)
+
+    for sid, bot in baidu_bots.items():
+        try:
+            if not bot.sessionId:
+                continue
+            with open('/sanic/sessions/{}.baidu'.format(sid), 'wb') as f:
+                pickle.dump({'sessionid': bot.sessionId}, f)
+            logger.info('Save %s Baidu session success.', sid)
+        except:
+            logger.error('Save %s Baidu session error.', sid, exc_info=True)
 
 
 if __name__ == '__main__':
