@@ -139,11 +139,11 @@ async def reset_conversation(sid, reset=False):
 
 
 def show_chatgpt(sid):
-    # 1 chatgpt 2 bard
+    # 1 chatgpt 2 bard 4 baidu
     for openid in conversation_ctr.get_openai_whitelist():
         if openid.decode() in sid:
-            return 3
-    return 2
+            return 7
+    return 6
 
 
 def get_show_channel(sid, authority=0):
@@ -158,14 +158,15 @@ def get_show_channel(sid, authority=0):
             'name': 'ChatGPT',
             'value': 'chatgpt'
         })
-        res.append({
-            'name': '文心一言',
-            'value': 'baidu'
-        })
     if authority & 2:
         res.append({
             'name': 'Google Bard',
             'value': 'bard'
+        })
+    if authority & 4:
+        res.append({
+            'name': '文心一言',
+            'value': 'baidu'
         })
     return res
 
@@ -783,8 +784,6 @@ async def ws_common(_, ws):
             channel = data['channel']
             logger.info('[%s] Websocket receive data: %s', channel, data)
             sid = data['sid']
-            if not (show_chatgpt(sid) & 1):
-                raise Exception(NO_ACCESS)
             if check_blocked(sid):
                 raise Exception(NO_ACCESS)
             q = data['q']
@@ -797,6 +796,8 @@ async def ws_common(_, ws):
                 break
             bot = get_channel_bot(sid, channel)
             if channel == 'baidu':
+                if not (show_chatgpt(sid) & 4):
+                    raise Exception(NO_ACCESS)
                 for message in bot.askStream(q):
                     if not message:
                         continue
