@@ -1,11 +1,5 @@
-FROM sanicframework/sanic:3.11-latest
+FROM registry.cn-beijing.aliyuncs.com/roselle-1/chat:base
 
 WORKDIR /sanic
 
-COPY Bard.py common.py keywords.txt dfa.py send_mail.py logger.py app.py EdgeGPT.py BingImageCreator.py conversation_ctr.py requirements.txt /sanic/
-
-RUN pip install -r requirements.txt
-
-RUN rm requirements.txt
-
-CMD ["python", "app.py"]
+COPY Bard.py common.py keywords.txt dfa.py send_mail.py logger.py app.py EdgeGPT.py BingImageCreator.py conversation_ctr.py /sanic/

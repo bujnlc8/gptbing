@@ -525,6 +525,13 @@ async def ws_openai_chat(_, ws):
             if not (show_chatgpt(sid) & 1):
                 raise Exception(NO_ACCESS)
             q = data['q']
+            forbid_data = check_forbidden_words(sid, q)
+            if forbid_data:
+                await ws.send(raw_json.dumps({
+                    'final': True,
+                    'data': forbid_data,
+                }))
+                break
             resp = await generate_image(q, sid)
             if resp:
                 await ws.send(raw_json.dumps({
@@ -712,6 +719,13 @@ async def ws_bard(_, ws):
             if check_blocked(sid):
                 raise Exception(NO_ACCESS)
             q = data['q']
+            forbid_data = check_forbidden_words(sid, q)
+            if forbid_data:
+                await ws.send(raw_json.dumps({
+                    'final': True,
+                    'data': forbid_data,
+                }))
+                break
             bot = await get_bard_bot(sid)
             resp = await bot.ask(q)
             text = resp['content'].replace('\r\n', '\n')
@@ -774,6 +788,13 @@ async def ws_common(_, ws):
             if check_blocked(sid):
                 raise Exception(NO_ACCESS)
             q = data['q']
+            forbid_data = check_forbidden_words(sid, q)
+            if forbid_data:
+                await ws.send(raw_json.dumps({
+                    'final': True,
+                    'data': forbid_data,
+                }))
+                break
             bot = get_channel_bot(sid, channel)
             if channel == 'baidu':
                 for message in bot.askStream(q):

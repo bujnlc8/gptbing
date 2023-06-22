@@ -1,0 +1,11 @@
+FROM sanicframework/sanic:3.11-latest
+
+WORKDIR /sanic
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+RUN rm requirements.txt
+
+CMD ["python", "app.py"]
