@@ -455,6 +455,8 @@ class _ChatHub:
                         if draw:
                             for i in range(1, len(response['item']['messages'])):
                                 try:
+                                    if 'text' not in response['item']['messages'][i]['adaptiveCards'][0]['body'][0]:
+                                        continue
                                     response['item']['messages'][i]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
                                 except:
                                     pass

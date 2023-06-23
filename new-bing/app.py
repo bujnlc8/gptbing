@@ -97,7 +97,7 @@ def check_hidden(text):
 
 def get_cookie_file(sid, cookie_files, reset=False):
     # 优先获取最后一个
-    if not reset and show_chatgpt(sid) & 1:
+    if not reset and get_authority(sid) & 1:
         return cookie_files[-1]
     # 根据sid相加取余算出一个数
     total_cookie_num = len(cookie_files) - 1
@@ -138,12 +138,9 @@ async def reset_conversation(sid, reset=False):
     bots[sid]['expired'] = datetime.now() + timedelta(days=89, hours=23, minutes=55)  # 会话有效期为90天
 
 
-def show_chatgpt(sid):
-    # 1 chatgpt 2 bard 4 baidu
-    for openid in conversation_ctr.get_openai_whitelist():
-        if openid.decode() in sid:
-            return 7
-    return 6
+def get_authority(sid):
+    # 0 bing 1 chatgpt 2 bard 4 baidu
+    return conversation_ctr.get_authority(sid[-28:])
 
 
 def get_show_channel(sid, authority=0):
@@ -152,7 +149,7 @@ def get_show_channel(sid, authority=0):
         'value': 'bing'
     }]
     if not authority:
-        authority = show_chatgpt(sid)
+        authority = get_authority(sid)
     if authority & 1:
         res.append({
             'name': 'ChatGPT',
@@ -278,7 +275,7 @@ def check_forbidden_words(sid, q):
 
 def check_limit(sid):
     incr = conversation_ctr.get_day_limit(sid)
-    if show_chatgpt(sid) & 1:
+    if get_authority(sid) & 1:
         return False
     return True if incr > DAY_LIMIT else False
 
@@ -452,7 +449,7 @@ async def openid(request):
     code = request.args.get('code')
     url = WX_URL % (APPID, APPSECRET, code)
     data = requests.get(url).json()
-    authority = show_chatgpt(data['openid'])
+    authority = get_authority(data['openid'])
     data['saved'] = authority
     data['channel'] = get_show_channel(data['openid'], authority=authority)
     return json({'data': data})
@@ -523,7 +520,7 @@ async def ws_openai_chat(_, ws):
             data = raw_json.loads(data)
             logger.info('[openai] Websocket receive data: %s', data)
             sid = data['sid']
-            if not (show_chatgpt(sid) & 1):
+            if not (get_authority(sid) & 1):
                 raise Exception(NO_ACCESS)
             q = data['q']
             forbid_data = check_forbidden_words(sid, q)
@@ -597,7 +594,7 @@ async def openai_chat(request):
     try:
         logger.info('[openai] Http request payload: %s', request.json)
         sid = request.json.get('sid')
-        if not (show_chatgpt(sid) & 1):
+        if not (get_authority(sid) & 1):
             raise Exception(NO_ACCESS)
         q = request.json.get('q')
         resp = await generate_image(q, sid)
@@ -650,7 +647,7 @@ async def save(request):
     if check_blocked(sid) or 'servicewechat.com/wxee7496be5b68b740' not in request.headers.get('referer', ''):
         raise Exception(NO_ACCESS)
     conversation_ctr.save(sid, request.json.get('conversations'))
-    authority = show_chatgpt(sid)
+    authority = get_authority(sid)
     return json({
         'saved': authority,
         'channel': get_show_channel(sid, authority=authority),
@@ -715,7 +712,7 @@ async def ws_bard(_, ws):
             data = raw_json.loads(data)
             logger.info('[bard] Websocket receive data: %s', data)
             sid = data['sid']
-            if not (show_chatgpt(sid) & 2):
+            if not (get_authority(sid) & 2):
                 raise Exception(NO_ACCESS)
             if check_blocked(sid):
                 raise Exception(NO_ACCESS)
@@ -796,7 +793,7 @@ async def ws_common(_, ws):
                 break
             bot = get_channel_bot(sid, channel)
             if channel == 'baidu':
-                if not (show_chatgpt(sid) & 4):
+                if not (get_authority(sid) & 4):
                     raise Exception(NO_ACCESS)
                 for message in bot.askStream(q):
                     if not message:

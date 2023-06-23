@@ -6,7 +6,6 @@ import os
 
 import redis
 import requests
-
 from logger import logger
 
 REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
@@ -24,6 +23,7 @@ class ConversationCtr:
     BLACK_LIST = 'bing:black_list'
     SWITCH_COOKIE_KEY = 'bing:switch_times:%s'
     DAY_LIMIT = 'bing:day_limit:%s:%s'
+    AUTHORITY = 'bing:authority:%s'
 
     def __init__(self, client=None) -> None:
         self.redis_client = client
@@ -109,6 +109,13 @@ class ConversationCtr:
     def get_day_limit(self, sid):
         key = self.DAY_LIMIT % (datetime.datetime.now().strftime('%Y%m%d'), sid)
         return self.redis_client.incr(key)
+
+    def get_authority(self, sid):
+        key = self.AUTHORITY % sid
+        data = self.redis_client.get(key)
+        if data:
+            return int(data.decode())
+        return 2
 
     def refresh_wiz_token(self):
         """refresh_wiz_token. 刷新wiz token 15分钟有效期
