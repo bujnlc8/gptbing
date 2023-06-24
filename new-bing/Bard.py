@@ -1,25 +1,15 @@
 # coding=utf-8
 import json
 import os
+import pickle
 import random
 import re
 import string
-import pickle
 
 import httpx
 
 
 class Chatbot:
-    """
-    A class to interact with Google Bard.
-    Parameters
-        session_id: str
-            The __Secure-1PSID cookie.
-        proxy: str
-        timeout: int
-            Request timeout in seconds.
-    """
-
     __slots__ = [
         'headers',
         '_reqid',
@@ -28,7 +18,6 @@ class Chatbot:
         'response_id',
         'choice_id',
         'proxy',
-        'session_id',
         'session',
         'timeout',
         'file_path',
@@ -36,42 +25,55 @@ class Chatbot:
 
     def __init__(
         self,
-        session_id: str = '',
         proxy: dict = None,
         timeout: int = 60,
         file_path: str = '',
     ):
         headers = {
+            'Authority': 'bard.google.com',
             'Host': 'bard.google.com',
             'X-Same-Domain': '1',
+            'Sec-Ch-Ua-Platform-Version': '"10.15.7"',
+            'Sec-Ch-Ua-Platform': '"macOS"',
+            'Sec-Ch-Ua-Mode': '""',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Full-Version-List': '"Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.133", "Google Chrome";v="114.0.5735.133"',  # noqa
+            'Sec-Ch-Ua-Full-Version': '"114.0.5735.133"',
+            'Sec-Ch-Ua-Bitness': '"64"',
+            'Sec-Ch-Ua-Arch': '"x86"',
+            'Sec-Ch-Ua': '"Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Site': 'same-origin',
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',  # noqa
             'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
             'Origin': 'https://bard.google.com',
             'Referer': 'https://bard.google.com/',
         }
-        session_id = session_id or os.environ.get('BARD_SESSION')
         proxy = proxy or os.environ.get('https_proxy')
         self._reqid = int(''.join(random.choices(string.digits, k=4)))
         self.proxy = proxy
         self.conversation_id = ''
         self.response_id = ''
         self.choice_id = ''
-        self.session_id = session_id
         self.session = httpx.AsyncClient(proxies=self.proxy)
         self.session.headers = headers
-        self.session.cookies.set('__Secure-1PSID', session_id)
         self.timeout = timeout
         self.file_path = file_path
+        # set cookies
+        cookie_path = os.environ.get('BARD_COOKIE_PATH', '/sanic/cookies/google.json')
+        with open(cookie_path, 'r') as f:
+            for x in json.load(f):
+                self.session.cookies.set(x['name'], x['value'], x['domain'], x['path'])
 
     @classmethod
     async def create(
         cls,
-        session_id: str = '',
         proxy: dict = None,
         timeout: int = 60,
         file_path: str = '',
     ) -> 'Chatbot':
-        instance = cls(session_id, proxy, timeout, file_path)
+        instance = cls(proxy, timeout, file_path)
         if not await instance.load_conversation():
             instance.SNlM0e = await instance.__get_snlm0e()
         return instance
@@ -105,8 +107,6 @@ class Chatbot:
 
     async def __get_snlm0e(self):
         # Find 'SNlM0e':'<ID>'
-        if not self.session_id or self.session_id[-1] != '.':
-            raise Exception('__Secure-1PSID value must end with a single dot. Enter correct __Secure-1PSID value.', )
         resp = await self.session.get(
             'https://bard.google.com/',
             timeout=self.timeout,
