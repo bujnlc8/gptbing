@@ -8,6 +8,8 @@ import string
 
 import httpx
 
+from logger import logger
+
 
 class Chatbot:
     __slots__ = [
@@ -64,7 +66,7 @@ class Chatbot:
         cookie_path = os.environ.get('BARD_COOKIE_PATH', '/sanic/cookies/google.json')
         with open(cookie_path, 'r') as f:
             for x in json.load(f):
-                self.session.cookies.set(x['name'], x['value'], x['domain'], x['path'])
+                self.session.cookies.set(x['name'], x['value'])
 
     @classmethod
     async def create(
@@ -116,6 +118,7 @@ class Chatbot:
             raise Exception(f'Response code not 200. Response Status is {resp.status_code}', )
         SNlM0e = re.search(r'"SNlM0e":"(.*?)"', resp.text)
         if not SNlM0e:
+            logger.error('[Bard Response], %s', resp.text)
             raise Exception('SNlM0e value not found in response. Check __Secure-1PSID value.', )
         return SNlM0e.group(1)
 

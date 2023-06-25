@@ -3,7 +3,7 @@
   justify-content: flex-start;
   flex-wrap: wrap;
   background-color: #f4f6f8;
-  border-radius: 0px 10px 0px 10px;
+  border-radius: 0px 0px 10px 10px;
   padding: 6px;
   margin-top: -10px;
 }

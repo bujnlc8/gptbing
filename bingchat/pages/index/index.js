@@ -74,6 +74,7 @@ const chatgptAvatar = "../../image/chatgpt.png";
 const bardAvatar = "../../image/bard-avatar.png";
 const personAvatar = "../../image/person.jpeg";
 const commonAvatar = "../../image/bot.png";
+const baiduAvatar = "../../image/baidu-avatar.png";
 
 Page({
   data: {
@@ -444,6 +445,8 @@ Page({
       rAvatar = chatgptAvatar;
     } else if (this.data.chatType == "bard") {
       rAvatar = bardAvatar;
+    } else if (this.data.chatType == "baidu") {
+      rAvatar = baiduAvatar;
     }
     cht.data.chatList.push({
       type: role,
