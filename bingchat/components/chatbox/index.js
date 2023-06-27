@@ -226,6 +226,12 @@ Component({
     },
     copyRenderedContentToClipBoard: function (index) {
       var ctx = this.selectComponent("#mp_html_" + index);
+      if (!ctx) {
+        wx.showToast({
+          title: "复制出错",
+        });
+        return;
+      }
       wx.setClipboardData({
         data: ctx.getText(),
         success: function () {
@@ -311,6 +317,9 @@ Component({
             wx.getStorage({
               key: cache_key,
               success: function (res) {
+                wx.showLoading({
+                  title: "发送中...",
+                });
                 app.getSid((sid) => {
                   doRequest("/share", "POST", {
                     url: res.data,
