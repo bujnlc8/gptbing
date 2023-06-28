@@ -104,7 +104,7 @@ def get_cookie_file(sid, cookie_files, reset=False):
     return cookie_files[(
         sum([ord(x)
              for x in sid.replace('_', '').replace('-', '')[10:]]) + conversation_ctr.get_switch_cookie_step(sid)
-    ) % total_cookie_num]
+    ) % (total_cookie_num if total_cookie_num else 1)]
 
 
 def get_bot(sid, cookie_path=None):
