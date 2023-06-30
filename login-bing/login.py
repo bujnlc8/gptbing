@@ -45,7 +45,7 @@ def login(index, user_name, passwd):
     submit_bt = driver.find_element(By.ID, 'idSIButton9')
     submit_bt.click()
     # wait for redirect to www.bing.com
-    time.sleep(30)
+    time.sleep(60)
     cookies = driver.get_cookies()
     with open('/bing/cookies/cookie{}.json'.format(index), 'w') as f:
         json.dump(cookies, f)

@@ -11,7 +11,7 @@ from logger import logger
 
 BING_URL = os.environ.get('BING_URL', 'https://www.bing.com')
 
-FORWARDED_IP = (f'13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}')
+FORWARDED_IP = f'13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}'
 
 HEADERS = {
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',

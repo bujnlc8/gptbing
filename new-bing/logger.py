@@ -17,7 +17,7 @@ def init_log():
     sh = logging.StreamHandler()
     sh.setFormatter(fmt)
     logger.addHandler(sh)
-    th = handlers.RotatingFileHandler('/sanic/logs/{}'.format(log_file), maxBytes=10 * 1024 * 1024, backupCount=10)
+    th = handlers.RotatingFileHandler('/sanic/logs/{}'.format(log_file), maxBytes=100 * 1024 * 1024, backupCount=10)
     th.setFormatter(fmt)
     logger.addHandler(th)
     return logger

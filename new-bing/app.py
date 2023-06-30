@@ -17,6 +17,7 @@ import requests
 import tiktoken
 from easy_ernie import FastErnie
 from sanic import Sanic
+from sanic.exceptions import SanicException
 from sanic.response import json
 
 from Bard import Chatbot as BardBot
@@ -174,9 +175,20 @@ def check_blocked(sid):
             return True
 
 
+def remove_redudant_url(s):
+    for x in re.findall(r'\[\d+\]:\s.*', s):
+        if '"' not in x:
+            s = s.replace(x, '')
+    for x in re.findall(r'.*:\s\[.*\].*', s):
+        if x.startswith(':'):
+            s = s.replace(x, '')
+    return s.strip()
+
+
 def make_response_data(status, text, suggests, message, num_in_conversation=-1, final=True):
     if not text.strip():
         text = '实在抱歉，我现在无法回答这个问题。 我还能为您提供哪些帮助？'
+    text = remove_redudant_url(text)
     data = {
         'data': {
             'status': status,
@@ -233,6 +245,9 @@ async def ask_bing(ws, sid, q, style, another_try=False):
                 raise Exception(
                     'The last message is being processed. Please wait for a while before submitting further messages.'
                 )
+            if processed_data['data']['status'] == 'CaptchaChallenge':
+                await reset_conversation(sid, reset=True)
+                raise Exception('User needs to solve CAPTCHA to continue.')
             if processed_data['data']['status'] == 'InternalError':
                 if last_not_final_text and not last_not_final_text.startswith('正在搜索'):
                     processed_data = make_response_data(
@@ -255,7 +270,7 @@ async def ask_bing(ws, sid, q, style, another_try=False):
                 last_not_final_text = res
                 await ws.send(raw_json.dumps({
                     'final': final,
-                    'data': res,
+                    'data': remove_redudant_url(res),
                 }))
 
 
@@ -297,17 +312,20 @@ async def ws_chat(_, ws):
                 raise Exception(NO_ACCESS)
             if check_limit(sid[-28:]):
                 raise Exception(OVER_DAY_LIMIT)
-            # 发生错误，重试10次
-            try_times = 10
+            # 发生错误，重试5次
+            try_times = 5
             await ask_bing(ws, sid, q, style)
             msg = ''
+        except SanicException as e:
+            msg = str(e) or SERVICE_NOT_AVALIABLE
+            try_times = 0
         except KeyError:
             msg = SERVICE_NOT_AVALIABLE
         except Exception as e:
             logger.error('%s', traceback.format_exc())
             msg = str(e) or SERVICE_NOT_AVALIABLE
         if msg:
-            while try_times and msg and 'sanic.exceptions' not in msg:
+            while try_times and msg:
                 try:
                     try_times -= 1
                     if OVER_DAY_LIMIT in msg or NO_ACCESS in msg or 'Your prompt has been blocked by Bing' in msg:
@@ -327,6 +345,9 @@ async def ws_chat(_, ws):
                         another_try=another_try,
                     )
                     msg = ''
+                except SanicException as e:
+                    msg = str(e) or SERVICE_NOT_AVALIABLE
+                    try_times = 0
                 except KeyError:
                     msg = SERVICE_NOT_AVALIABLE
                 except Exception as e:

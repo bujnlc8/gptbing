@@ -25,7 +25,7 @@ DELIMITER = '\x1e'
 BING_PROXY_URL = os.environ.get('BING_PROXY_URL')
 
 # Generate random IP between range 13.104.0.0/14
-FORWARDED_IP = (f'13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}')
+FORWARDED_IP = f'13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}'
 
 HEADERS = {
     'accept': 'application/json',
@@ -206,20 +206,21 @@ class _ChatHubRequest:
                         'locale': 'zh-CN',
                         'market': 'zh-CN',
                         'region': 'WW',
-                        'location': 'lat:47.639557;long:-122.128159;re=1000m;',
-                        'locationHints': [{
-                            'country': 'Singapore',
-                            'state': 'Central Singapore',
-                            'city': 'Singapore',
-                            'timezoneoffset': 8,
-                            'countryConfidence': 8,
-                            'Center': {
-                                'Latitude': 1.2894,
-                                'Longitude': 103.85
+                        'locationHints': [
+                            {
+                                'country': 'Singapore',
+                                'state': 'Central Singapore',
+                                'city': 'Singapore',
+                                'timezoneoffset': 8,
+                                'countryConfidence': 8,
+                                'Center': {
+                                    'Latitude': 1.2894,
+                                    'Longitude': 103.85,
+                                },
+                                'RegionType': 2,
+                                'SourceType': 1,
                             },
-                            'RegionType': 2,
-                            'SourceType': 1
-                        }],
+                        ],
                         'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S+08:00'),
                         'author': 'user',
                         'inputMethod': 'Keyboard',
