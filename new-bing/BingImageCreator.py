@@ -1,7 +1,6 @@
 import asyncio
 import json
 import os
-import random
 
 import aiohttp
 import regex
@@ -11,8 +10,6 @@ from logger import logger
 
 BING_URL = os.environ.get('BING_URL', 'https://www.bing.com')
 
-FORWARDED_IP = f'13.{random.randint(104, 107)}.{random.randint(0, 255)}.{random.randint(0, 255)}'
-
 HEADERS = {
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'accept-language': 'en-US,en;q=0.9',
@@ -20,8 +17,7 @@ HEADERS = {
     'content-type': 'application/x-www-form-urlencoded',
     'referrer': 'https://www.bing.com/images/create/',
     'origin': 'https://www.bing.com',
-    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.63',
-    'x-forwarded-for': FORWARDED_IP,
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.50',
 }
 
 
@@ -32,9 +28,11 @@ class ImageGenAsync:
         auth_cookie: str
     """
 
-    def __init__(self, auth_cookie: str) -> None:
+    def __init__(self, auth_cookie: str, forwarded_ip: str) -> None:
+        headers = HEADERS
+        headers['x-forwarded-for'] = forwarded_ip
         self.session = aiohttp.ClientSession(
-            headers=HEADERS,
+            headers=headers,
             cookies={"_U": auth_cookie},
             trust_env=True,
         )
@@ -109,7 +107,7 @@ class ImageGenAsync:
         return normal_image_links
 
 
-async def async_image_gen(prompt, cookie_path=''):
+async def async_image_gen(prompt, cookie_path='', forwarded_ip=''):
     cookie = ''
     with open(cookie_path, 'r', encoding='utf-8') as f:
         cookie_file = json.load(f)
@@ -117,5 +115,5 @@ async def async_image_gen(prompt, cookie_path=''):
             if x['name'] == '_U':
                 cookie = x['value']
                 break
-    async with ImageGenAsync(cookie) as image_generator:
+    async with ImageGenAsync(cookie, forwarded_ip) as image_generator:
         return await image_generator.get_images(prompt)

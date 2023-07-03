@@ -178,7 +178,7 @@ def check_blocked(sid):
 def remove_redudant_url(s):
     for x in re.findall(r'\[\d+\]:\s.*', s):
         if '"' not in x:
-            s = s.replace(x, '')
+            s = s.replace(x + '\n', '')
     for x in re.findall(r'.*:\s\[.*\].*', s):
         if x.startswith(':'):
             s = s.replace(x, '')
