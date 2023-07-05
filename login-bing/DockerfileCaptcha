@@ -1,0 +1,19 @@
+FROM python:3.11.4-slim-buster
+
+ENV DEBIAN_FRONTEND noninteractive
+
+WORKDIR /bing
+
+COPY chrome-linux/chromedriver chrome-linux/google-chrome-stable_current_amd64.deb redis_client.py captcha.py login.py send_mail.py /bing/
+
+RUN apt update
+
+RUN pip install undetected-chromedriver==3.5.0 redis==4.6.0 hiredis==2.2.3 --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+RUN dpkg -i google-chrome-stable_current_amd64.deb;exit 0
+
+RUN apt install -f -y
+
+RUN rm -rf google-chrome-stable_current_amd64.deb /var/lib/apt
+
+CMD python captcha.py >> captcha.log

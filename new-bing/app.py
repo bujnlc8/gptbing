@@ -127,6 +127,7 @@ def get_bot(sid, cookie_path=None):
         logger.info('Reload %s session success.', sid)
     except Exception:
         bot = Chatbot(cookie_path=cookie_path)
+    Cha
     bots[sid] = {
         'bot': bot,
         'expired': datetime.now() + timedelta(days=89, hours=23, minutes=55),  # 会话有效期为90天
@@ -135,8 +136,10 @@ def get_bot(sid, cookie_path=None):
 
 
 async def reset_conversation(sid, reset=False):
-    await get_bot(sid, cookie_path=get_cookie_file(sid, COOKIE_FILES, reset=reset)).reset()
+    cookie_path = get_cookie_file(sid, COOKIE_FILES, reset=reset)
+    await get_bot(sid, cookie_path=cookie_path).reset()
     bots[sid]['expired'] = datetime.now() + timedelta(days=89, hours=23, minutes=55)  # 会话有效期为90天
+    logger.info('[BotCookie] %s reset conversation with cookie: %s', sid, cookie_path)
 
 
 def get_authority(sid):
@@ -229,7 +232,8 @@ async def ask_bing(ws, sid, q, style, another_try=False):
             'data': make_response_data('Success', resp, [], '')
         }))
         return
-    async for response in get_bot(sid).ask_stream(
+    bot = get_bot(sid)
+    async for response in bot.ask_stream(
             q,
             conversation_style=ConversationStyle[style],
             another_try=another_try,
@@ -246,6 +250,7 @@ async def ask_bing(ws, sid, q, style, another_try=False):
                     'The last message is being processed. Please wait for a while before submitting further messages.'
                 )
             if processed_data['data']['status'] == 'CaptchaChallenge':
+                conversation_ctr.publish_captcha(bot.cookie_path)
                 await reset_conversation(sid, reset=True)
                 raise Exception('User needs to solve CAPTCHA to continue.')
             if processed_data['data']['status'] == 'InternalError':

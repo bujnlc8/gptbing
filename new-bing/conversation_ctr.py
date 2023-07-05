@@ -24,6 +24,7 @@ class ConversationCtr:
     SWITCH_COOKIE_KEY = 'bing:switch_times:%s'
     DAY_LIMIT = 'bing:day_limit:%s:%s'
     AUTHORITY = 'bing:authority:%s'
+    CAPTCHA = 'bing:captcha'
 
     def __init__(self, client=None) -> None:
         self.redis_client = client
@@ -161,6 +162,9 @@ class ConversationCtr:
                 self.redis_client.set('bing:wiz:token:{}'.format(token), 1, 12 * 60)
         else:
             logger.error('[RefreshWiz] refresh %s failed, returnCode: %s', token, resp['returnCode'])
+
+    def publish_captcha(self, cookie_path):
+        return self.redis_client.publish(self.CAPTCHA, cookie_path.split('/')[-1])
 
 
 conversation_ctr = ConversationCtr()
