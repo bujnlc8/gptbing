@@ -1,8 +1,8 @@
 # coding=utf-8
 
+import datetime
 import json
 import os
-import re
 import sys
 import time
 import traceback
@@ -12,14 +12,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from login import login
 from redis_client import redis_client
 
 BING_ACCOUNT_LIST = json.loads(os.environ.get('BING_ACCOUNT_LIST', '[]'))
 
 CAPTCHA_URL = 'https://www.bing.com/turing/captcha/challenge'
 
-# DRIVER_PATH = '/Users/linghaihui/Downloads/chromedriver_mac64/chromedriver'
 DRIVER_PATH = '/bing/chromedriver'
 
 COOKIE_PREFIX = '/bing/cookies/'
@@ -55,7 +53,7 @@ def solve_captcha(cookie_path):
             try_times -= 1
             success = WebDriverWait(driver, 180).until(EC.presence_of_element_located((By.ID, 'success')))
             if success and success.is_displayed():
-                print('[Success]', cookie_path)
+                print('[Success]', datetime.datetime.now(), cookie_path)
                 break
             time.sleep(15)
             if not try_times:
@@ -64,6 +62,13 @@ def solve_captcha(cookie_path):
                 driver.get(CAPTCHA_URL)
                 time.sleep(15)
                 driver.switch_to.frame(0)
+        driver.get('https://www.bing.com')
+        time.sleep(60)
+        cookies = driver.get_cookies()
+        if cookies:
+            with open(cookie_path, 'w') as f:
+                json.dump(cookies, f)
+                f.flush()
     except Exception:
         print(driver.get_screenshot_as_base64())
     finally:
@@ -75,16 +80,9 @@ if __name__ == '__main__':
         try:
             for cookie_path in redis_client.subscribe_captcha():
                 try:
-                    print('receive: ', cookie_path)
+                    print('receive: ', datetime.datetime.now(), cookie_path)
                     sys.stdout.flush()
                     solve_captcha(COOKIE_PREFIX + cookie_path)
-                    sys.stdout.flush()
-                    index = int(re.findall(r'cookie(\d+).*', cookie_path)[0])
-                    login(
-                        index,
-                        BING_ACCOUNT_LIST[index]['user'],
-                        BING_ACCOUNT_LIST[index]['password'],
-                    )
                     sys.stdout.flush()
                 except:
                     traceback.print_exc()

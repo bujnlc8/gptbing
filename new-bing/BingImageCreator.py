@@ -107,13 +107,11 @@ class ImageGenAsync:
         return normal_image_links
 
 
-async def async_image_gen(prompt, cookie_path='', forwarded_ip=''):
+async def async_image_gen(prompt, cookies=None, forwarded_ip=''):
     cookie = ''
-    with open(cookie_path, 'r', encoding='utf-8') as f:
-        cookie_file = json.load(f)
-        for x in cookie_file:
-            if x['name'] == '_U':
-                cookie = x['value']
-                break
+    for x in cookies or []:
+        if x['name'] == '_U':
+            cookie = x['value']
+            break
     async with ImageGenAsync(cookie, forwarded_ip) as image_generator:
         return await image_generator.get_images(prompt)

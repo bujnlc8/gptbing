@@ -374,14 +374,18 @@ class _ChatHub:
         conversation_style: CONVERSATION_STYLE_TYPE = None,
         raw: bool = False,
         options: dict = None,
-        cookie_path: str = '',
+        cookies: list = None,
         another_try: bool = False,
     ) -> Generator[str, None, None]:
         """
         Ask a question to the bot
         """
         timeout = aiohttp.ClientTimeout(total=3600)
-        self.session = aiohttp.ClientSession(timeout=timeout)
+        self.session = aiohttp.ClientSession(
+            timeout=timeout,
+            cookies={x['name']: x['value']
+                     for x in cookies},
+        )
         headers = HEADERS
         headers['x-forwarded-for'] = self.request.forwarded_ip
         self.wss = await self.session.ws_connect(
@@ -444,7 +448,7 @@ class _ChatHub:
                         if (response['arguments'][0]['messages'][0].get('messageType') == 'GenerateContentQuery'):
                             images = await async_image_gen(
                                 response['arguments'][0]['messages'][0]['text'],
-                                cookie_path=cookie_path,
+                                cookies=cookies,
                                 forwarded_ip=self.request.forwarded_ip,
                             )
                             for i, image in enumerate(images):
@@ -496,6 +500,14 @@ class _ChatHub:
                         pass
                 else:
                     logger.info('[Response], receive %s', response)
+                    try:
+                        if response.get('type') == 1:
+                            throttling = response['arguments'][0]['throttling']
+                            if throttling['numUserMessagesInConversation'] > throttling[
+                                    'maxNumUserMessagesInConversation']:
+                                raise Exception('Throttled, %s', throttling)
+                    except (KeyError, ValueError):
+                        pass
 
     async def _initial_handshake(self) -> None:
         if not self.wss:
@@ -554,12 +566,13 @@ class Chatbot:
         Ask a question to the bot
         """
         try:
+            self.load_cookie()
             async for final, response in self.chat_hub.ask_stream(
                     prompt=prompt,
                     conversation_style=conversation_style,
                     wss_link=wss_link,
                     options=options,
-                    cookie_path=self.cookie_path,
+                    cookies=self.cookies,
             ):
                 if final:
                     return response
@@ -581,13 +594,14 @@ class Chatbot:
         Ask a question to the bot
         """
         try:
+            self.load_cookie()
             async for response in self.chat_hub.ask_stream(
                     prompt=prompt,
                     conversation_style=conversation_style,
                     wss_link=wss_link,
                     raw=raw,
                     options=options,
-                    cookie_path=self.cookie_path,
+                    cookies=self.cookies,
                     another_try=another_try,
             ):
                 yield response

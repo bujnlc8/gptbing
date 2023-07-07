@@ -127,7 +127,6 @@ def get_bot(sid, cookie_path=None):
         logger.info('Reload %s session success.', sid)
     except Exception:
         bot = Chatbot(cookie_path=cookie_path)
-    Cha
     bots[sid] = {
         'bot': bot,
         'expired': datetime.now() + timedelta(days=89, hours=23, minutes=55),  # 会话有效期为90天
@@ -335,6 +334,8 @@ async def ws_chat(_, ws):
                     try_times -= 1
                     if OVER_DAY_LIMIT in msg or NO_ACCESS in msg or 'Your prompt has been blocked by Bing' in msg:
                         break
+                    if 'Throttled' in msg:
+                        await reset_conversation(sid)
                     if 'Concurrent call to receive() is not allowed' in msg:
                         await asyncio.sleep(45)
                     another_try = False
