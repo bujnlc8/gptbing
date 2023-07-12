@@ -12,11 +12,17 @@ App({
     });
     if (that.globalData.sid) {
       that.upload_cache_conversation(that.globalData.sid);
+      doRequest("/channel", "GET", { sid: that.globalData.sid }).then((res) => {
+        that.globalData.channel = res.data.data;
+      });
     } else {
       wx.getStorage({
         key: "sid1",
         success: (res) => {
           that.upload_cache_conversation(res.data);
+          doRequest("/channel", "GET", { sid: res.data }).then((res) => {
+            that.globalData.channel = res.data.data;
+          });
         },
       });
     }

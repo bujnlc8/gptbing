@@ -75,6 +75,8 @@ const bardAvatar = "../../image/bard-avatar.png";
 const personAvatar = "../../image/person.jpeg";
 const commonAvatar = "../../image/bot.png";
 const baiduAvatar = "../../image/baidu-avatar.png";
+const sageAvatar = "../../image/sage.png";
+const claudeAvatar = "../../image/claude.png";
 
 Page({
   data: {
@@ -148,7 +150,12 @@ Page({
   onShow() {
     // 切换title
     var that = this;
-    that.switchTitle();
+    that.setData({
+      chatType: app.globalData.chatType,
+    });
+    setTimeout(() => {
+      that.switchTitle();
+    }, 500);
     wx.getStorage({
       key: "showHaveHideTip",
       success: (res) => {
@@ -447,6 +454,10 @@ Page({
       rAvatar = bardAvatar;
     } else if (this.data.chatType == "baidu") {
       rAvatar = baiduAvatar;
+    } else if (this.data.chatType == "sage") {
+      rAvatar = sageAvatar;
+    } else if (this.data.chatType == "claude") {
+      rAvatar = claudeAvatar;
     }
     cht.data.chatList.push({
       type: role,
@@ -1101,18 +1112,11 @@ Page({
               });
               app.globalData.chatType = chatType;
               if (oldChatType != chatType) {
-                if (chatType == "bard") {
-                  wx.showToast({
-                    title: "已切换成Bard，暂不支持中文",
-                    icon: "none",
-                  });
-                } else {
-                  wx.showToast({
-                    title:
-                      "已切换成" + app.globalData.channel[res.tapIndex]["name"],
-                    icon: "none",
-                  });
-                }
+                wx.showToast({
+                  title:
+                    "已切换成" + app.globalData.channel[res.tapIndex]["name"],
+                  icon: "none",
+                });
                 // 关闭websocket
                 that.onCancelReceive();
                 setTimeout(() => {

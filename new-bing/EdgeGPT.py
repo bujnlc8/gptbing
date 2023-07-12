@@ -95,9 +95,12 @@ class ConversationStyle(Enum):
         'disable_emoji_spoken_text',
         'responsible_ai_policy_235',
         'enablemm',
-        'h3imaginative',
+        'weanow',
+        'objopinion',
+        'recdxgnd',
         'dv3sugg',
         'autosave',
+        'h3imaginative',
         'clgalileo',
         'gencontentv3',
     ]
@@ -107,9 +110,12 @@ class ConversationStyle(Enum):
         'disable_emoji_spoken_text',
         'responsible_ai_policy_235',
         'enablemm',
-        'galileo',
+        'weanow',
+        'objopinion',
+        'recdxgnd',
         'dv3sugg',
         'autosave',
+        'harmonyv3',
         'saharagenconv5',
     ]
     precise = [
@@ -118,9 +124,12 @@ class ConversationStyle(Enum):
         'disable_emoji_spoken_text',
         'responsible_ai_policy_235',
         'enablemm',
-        'h3precise',
+        'weanow',
+        'objopinion',
+        'recdxgnd',
         'dv3sugg',
         'autosave',
+        'h3precise',
         'clgalileo',
         'gencontentv3',
     ]
@@ -144,7 +153,7 @@ def get_ran_hex(length: int = 32) -> str:
     return ''.join(random.choice('0123456789abcdef') for _ in range(length))
 
 
-def _get_proxy():
+def get_proxy():
     proxy = (
         os.environ.get('all_proxy') or os.environ.get('ALL_PROXY') or os.environ.get('https_proxy')
         or os.environ.get('HTTPS_PROXY') or None
@@ -203,8 +212,27 @@ class _ChatHubRequest:
                         "Progress",
                         'Disengaged',
                     ],
-                    'sliceIds': [],
+                    'sliceIds': [
+                        'winmuid3tf',
+                        'anssupfo1',
+                        'nodpall',
+                        'blncddv3vialang70',
+                        'blncddv3vialang',
+                        'winlongmsg2tf',
+                        'sydtransctrl',
+                        'convcssclick',
+                        'sydconfigoptt',
+                        'upsellmod3',
+                        '707scss0',
+                        '517opinion',
+                        '0710enfeds0',
+                        'realestate',
+                        '628ajcopu',
+                        'fluxpc0714s0',
+                        'revpayaad',
+                    ],
                     'traceId': get_ran_hex(32),
+                    'scenario': 'SERP',
                     'isStartOfSession': self.invocation_id == 0,
                     'tone': conversation_style.name.capitalize() if conversation_style else '',
                     'message': {
@@ -227,6 +255,7 @@ class _ChatHubRequest:
                             },
                         ],
                         'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+                        'userIpAddress': '14.197.148.35',
                         'author': 'user',
                         'inputMethod': 'Keyboard',
                         'text': prompt,
@@ -268,7 +297,7 @@ class _Conversation:
                 'message': None
             },
         }
-        proxy = _get_proxy()
+        proxy = get_proxy()
         self.session = httpx.Client(
             proxies=proxy,
             timeout=60,
@@ -313,7 +342,7 @@ class _Conversation:
                 'message': None
             },
         }
-        proxy = _get_proxy()
+        proxy = get_proxy()
         transport = httpx.AsyncHTTPTransport(retries=5)
         async with httpx.AsyncClient(
                 proxies=proxy,
@@ -394,7 +423,7 @@ class _ChatHub:
             ssl=ssl_context,
             autoclose=True,
             timeout=3600,
-            proxy=_get_proxy(),
+            proxy=get_proxy(),
         )
         await self._initial_handshake()
         logger.info(
@@ -454,7 +483,7 @@ class _ChatHub:
                             for i, image in enumerate(images):
                                 resp_txt += f'\n![image{i}]({image})'
                             draw = True
-                        if (response['arguments'][0]['messages'][0]['contentOrigin'] != 'Apology') and not draw:
+                        if (response['arguments'][0]['messages'][0].get('contentOrigin', '') != 'Apology') and not draw:
                             resp_txt = response['arguments'][0]['messages'][0]['adaptiveCards'][0]['body'][0].get(
                                 'text', ''
                             )
@@ -475,7 +504,7 @@ class _ChatHub:
                                     response['item']['messages'][i]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
                                 except:
                                     pass
-                        if (response['item']['messages'][-1]['contentOrigin'] == 'Apology' and resp_txt):
+                        if (response['item']['messages'][-1].get('contentOrigin', '') == 'Apology' and resp_txt):
                             response['item']['messages'][-1]['text'] = resp_txt_no_link
                             response['item']['messages'][-1]['adaptiveCards'][0]['body'][0]['text'] = resp_txt
                     except KeyError:
@@ -505,7 +534,7 @@ class _ChatHub:
                             throttling = response['arguments'][0]['throttling']
                             if throttling['numUserMessagesInConversation'] > throttling[
                                     'maxNumUserMessagesInConversation']:
-                                raise Exception('Throttled, %s', throttling)
+                                raise Exception('Throttled, %s' % throttling)
                     except (KeyError, ValueError):
                         pass
 

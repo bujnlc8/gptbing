@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 
 import aiohttp
 import openai
+import poe
 import requests
 import tiktoken
 from easy_ernie import FastErnie
@@ -26,7 +27,7 @@ from common import DAY_LIMIT, FORBIDDEN_TIP, INTERNAL_ERROR, NO_ACCESS, OVER_DAY
     SERVICE_NOT_AVALIABLE
 from conversation_ctr import conversation_ctr
 from dfa import dfa
-from EdgeGPT import Chatbot, ConversationStyle
+from EdgeGPT import Chatbot, ConversationStyle, get_proxy
 from logger import logger
 from send_mail import send_mail
 
@@ -44,6 +45,9 @@ app.config.REQUEST_TIMEOUT = 900
 app.config.RESPONSE_TIMEOUT = 900
 app.config.WEBSOCKET_PING_INTERVAL = 10
 app.config.WEBSOCKET_PING_TIMEOUT = 60
+
+# poe p-b cookie
+POE_TOKEN = os.environ.get('POE_TOKEN', '')
 
 bots = {}
 bard_bots = {}
@@ -65,9 +69,9 @@ HIDDEN_TEXTS = [
 
 
 def wrap_q(q):
-    if q.startswith('刚刚发生了点错误'):
+    if q.startswith('刚刚网络发生了点错误'):
         return q
-    return '刚刚发生了点错误，请再次耐心地回答以下问题：' + q
+    return '刚刚网络发生了点错误，请再次耐心地回答以下问题：' + q
 
 
 def get_strip_words():
@@ -142,7 +146,7 @@ async def reset_conversation(sid, reset=False):
 
 
 def get_authority(sid):
-    # 0 bing 1 chatgpt 2 bard 4 baidu
+    # 0 bing 1 chatgpt 2 bard 4 baidu 8 poe
     return conversation_ctr.get_authority(sid[-28:])
 
 
@@ -158,10 +162,20 @@ def get_show_channel(sid, authority=0):
             'name': 'ChatGPT',
             'value': 'chatgpt'
         })
+    if authority & 8:
+        res.append({
+            'name': 'Claude',
+            'value': 'claude'
+        })
     if authority & 2:
         res.append({
             'name': 'Google Bard',
             'value': 'bard'
+        })
+    if authority & 8:
+        res.append({
+            'name': 'Poe Sage',
+            'value': 'sage'
         })
     if authority & 4:
         res.append({
@@ -181,9 +195,12 @@ def remove_redudant_url(s):
     for x in re.findall(r'\[\d+\]:\s.*', s):
         if '"' not in x:
             s = s.replace(x + '\n', '')
-    for x in re.findall(r'.*:\s\[.*\].*', s):
+    for x in re.findall(r'.*:\s\[.*\]\(.*\)', s):
         if x.startswith(':'):
-            s = s.replace(x, '')
+            s = s.replace(x, x[1:].strip())
+    for x in re.findall(r'.*:\shttp.*', s):
+        if x.startswith(':'):
+            s = s.replace(x, x[1:].strip())
     return s.strip()
 
 
@@ -321,9 +338,11 @@ async def ws_chat(_, ws):
             await ask_bing(ws, sid, q, style)
             msg = ''
         except SanicException as e:
+            logger.error('%s', traceback.format_exc())
             msg = str(e) or SERVICE_NOT_AVALIABLE
             try_times = 0
         except KeyError:
+            logger.error('%s', traceback.format_exc())
             msg = SERVICE_NOT_AVALIABLE
         except Exception as e:
             logger.error('%s', traceback.format_exc())
@@ -399,7 +418,9 @@ async def process_data(res, q, sid, auto_reset=None, auto_new_talk=True):
             for i in range(1, len(item)):
                 if 'adaptiveCards' in item[i]:
                     try:
-                        text += item[i]['adaptiveCards'][0]['body'][0]['text'] + '\n'
+                        tmp = item[i]['adaptiveCards'][0]['body'][0]['text']
+                        if tmp != 'Mentioned':
+                            text += tmp + '\n'
                     except KeyError:
                         pass
                 if 'suggestedResponses' in item[i]:
@@ -480,6 +501,12 @@ async def openid(request):
     data['saved'] = authority
     data['channel'] = get_show_channel(data['openid'], authority=authority)
     return json({'data': data})
+
+
+@app.route('/bing/channel')
+async def channel(request):
+    sid = request.args.get('sid', 'foo')
+    return json({'data': get_show_channel(sid)})
 
 
 # #########################################以下是openid接口##################################
@@ -563,6 +590,10 @@ async def ws_openai_chat(_, ws):
                     'final': True,
                     'data': make_response_data('Success', resp, [], '')
                 }))
+                continue
+            # 8月1号切换到poe chatgpt
+            if datetime.now() > datetime(2023, 8, 1):
+                await ask_poe(sid, q, ws, 'chatgpt')
                 continue
             style = data.get('style', 'creative')
             # 保存20个对话
@@ -796,10 +827,70 @@ def get_channel_bot(sid, channel) -> BardBot:
         return bot
 
 
+async def ask_poe(sid, q, ws, channel):
+    if channel in ('sage', 'claude') and not (get_authority(sid) & 8):
+        raise Exception(NO_ACCESS)
+
+    if channel in ('chatgpt', ) and not (get_authority(sid) & 1):
+        raise Exception(NO_ACCESS)
+    suggests = []
+
+    def suggests_cb(suggest):
+        suggests.append(suggest)
+
+    client = poe.Client(POE_TOKEN, proxy=get_proxy())
+    last_msg = ''
+    #  {
+    #      'capybara': 'Sage',
+    #      'chinchilla': 'ChatGPT',
+    #      'a2_100k': 'Claude-instant-100k',
+    #      'a2_2': 'Claude-2-100k',
+    #      'beaver': 'GPT-4',
+    #      'a2': 'Claude-instant',
+    #      'agouti': 'ChatGPT-16k',
+    #      'vizcacha': 'GPT-4-32k',
+    #      'acouchy': 'Google-PaLM'
+    #  }
+    model = 'a2_2'
+    if channel == 'sage':
+        model = 'capybara'
+    elif channel == 'chatgpt':
+        model = 'chinchilla'
+    elif channel == 'claude':
+        if conversation_ctr.redis_client.get('bing:a2_2_limit'):
+            model = 'a2_100k'
+            if conversation_ctr.redis_client.get('bing:a2_100k_limit'):
+                model = 'a2'
+    try:
+        for resp in client.send_message(model, q, suggest_callback=suggests_cb):
+            last_msg = resp['text']
+            await ws.send(raw_json.dumps({
+                'final': False,
+                'data': last_msg,
+            }))
+    except Exception as e:
+        if 'Daily limit reached' in str(e) and channel == 'claude':
+            now = datetime.now()
+            expire = (24 - now.hour + 8) * 3600 - 60 * now.minute - now.second + 2
+            conversation_ctr.redis_client.set('bing:{}_limit'.format(model), 1, expire)
+        raise e
+    await asyncio.sleep(5)
+    if last_msg:
+        await ws.send(raw_json.dumps({
+            'final': True,
+            'data': make_response_data('Success', last_msg, suggests, '')
+        }))
+    else:
+        await ws.send(raw_json.dumps({
+            'final': True,
+            'data': make_response_data('Success', '响应为空！', suggests, '')
+        }))
+
+
 @app.websocket('/bing/ws_common')
 async def ws_common(_, ws):
     while True:
-        msg, sid, q = '', '', ''
+        msg, sid, q, channel = '', '', '', ''
         try:
             data = await ws.recv()
             if not data:
@@ -840,11 +931,18 @@ async def ws_common(_, ws):
                             'final': False,
                             'data': text,
                         }))
+            elif channel == 'claude' or channel == 'sage':
+                try:
+                    await ask_poe(sid, q, ws, channel)
+                except Exception as e:
+                    if 'Daily limit reached' in str(e) and channel == 'claude':
+                        await ask_poe(sid, q, ws, channel)
             else:
                 raise Exception('不支持的渠道')
         except Exception as e:
             logger.error('%s', traceback.format_exc())
             msg = str(e) or SERVICE_NOT_AVALIABLE
+            send_mail(channel, '\n'.join([sid, q, msg]))
             await ws.send(raw_json.dumps({
                 'final': True,
                 'data': make_response_data('Error', msg, [q], msg)

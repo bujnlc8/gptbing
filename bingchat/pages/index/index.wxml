@@ -2,7 +2,7 @@
 <view class="topTip" wx:if="{{showTopTip}}" catchtap="closeTopTip"><text class="tipText">长按页面空白处可弹出更多菜单！</text>
 	<icon type="clear" size="14" color="#62102e" style="position: fixed;right: 3px;top:3px;opacity: 0.2;"></icon>
 </view>
-<chat-box id="chat-id" bindsuggestSubmit="onSuggestSubmit" bindcancelReceive="onCancelReceive" bindswitchRequestMethod="switchRequestMethod" catchlongpress="longPress" chatType="{{chatType}}" loadData="{{loadData}}" mode="normal" style="height: {{chatBoxHeight}}px"></chat-box>
+<chat-box id="chat-id" bindsuggestSubmit="onSuggestSubmit" bindcancelReceive="onCancelReceive" bindswitchRequestMethod="switchRequestMethod" catchlongpress="longPress" chatType="{{chatType}}" loadData="{{loadData}}" mode="normal"></chat-box>
 <view style="bottom:{{inputBottom}}px; border-radius: 12px;margin-left: 1%;z-index: 9000; width: 98%;min-height: 58px;position: fixed;background-color: #f4f6f8;display: flex;align-items:flex-start;justify-content: space-between;border: {{textareaFocus ? '1px': '0px'}} solid {{chatStyleBg[chatStyle]}};">
 	<textarea bindfocus="inputFocus" bindblur="inputBlur" value="{{content}}" adjust-position="{{false}}" focus="{{textareaFocus}}" maxlength="20000" auto-height="{{true}}" cursor-spacing="10" bindconfirm="submit" fixed="{{true}}" show-confirm-bar="{{false}}" confirm-type="send" placeholder='请输入问题...' style="caret-color:{{chatStyleBg[chatStyle]}};padding: 6px;flex: 9;line-height: normal;" placeholder-style="color: {{textareaFocus ? chatStyleBg[chatStyle] : '#b4bbc4'}}" catchtap="focus" bindinput="inputData" catchlongpress="scrollBottom"></textarea>
 	<view style="background-color: #f4f6f8;color: {{content ? black : '#b4bbc4'}};border-radius: 0 12px 12px 0;height: 50px;cursor: pointer;margin-right: 8px;padding-top:6px;font-size: 18px;" catchtap="submit" wx:if="{{systemInfo.platform != 'ios'}}">发送</view>
@@ -19,7 +19,7 @@
 	</view>
 	<view class="tipItem" wx:if="{{chatType == 'bing'}}">6、发送<text catchtap="sendResetConversation" class="strengthenTextUnderline">重新对话！</text>可开启新一轮对话；
 	</view>
-	<view class="tipItem">{{chatType == 'bing' ? 7: 6}}、请<text class="strengthenText">文明提问，不要试图挑战道德及法律底线，不要聊政治相关话题</text>，可能被关小黑屋！</view>
+	<view class="tipItem">{{chatType == 'bing' ? 7: 6}}、请<text class="strengthenText">文明提问，不要试图挑战道德及法律底线，不要聊政治相关话题</text>，可能被关小黑屋！答案不一定准确，请自行甄别！</view>
 	<view class="tipItem">{{chatType == 'bing' ? 8: 7}}、使用过程中有任何的建议或意见欢迎到<button open-type="contact" session-from="sessionFrom" style="padding:0;width:2em;display:inline;background-color: #ffffff;line-height: 1.6em;border: none;font-size: 1em;" class="strengthenTextUnderline">客服</button>反馈，如果觉得还不错可以添加到收藏哦😊</view>
 	<view class="tipBtn" catchtap="closeHelpTip"><text class="tipBtnText">知道了</text></view>
 </view>

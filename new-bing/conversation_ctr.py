@@ -116,7 +116,8 @@ class ConversationCtr:
         data = self.redis_client.get(key)
         if data:
             return int(data.decode())
-        return 2
+        # default enable google bard and poe
+        return 10
 
     def refresh_wiz_token(self):
         """refresh_wiz_token. 刷新wiz token 15分钟有效期

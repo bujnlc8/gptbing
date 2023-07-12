@@ -21,10 +21,10 @@ def _send_mail(sender, sender_passwd, receiver, subject, body):
         smtp.ehlo(HOST_SERVER)
         smtp.login(sender, sender_passwd)
 
-        msg = MIMEText(body, "plain", 'utf-8')
-        msg["Subject"] = Header(subject, 'utf-8')
-        msg["From"] = sender
-        msg["To"] = receiver
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = Header(subject, 'utf-8')
+        msg['From'] = sender
+        msg['To'] = receiver
         smtp.sendmail(sender, receiver, msg.as_string())
         smtp.quit()
     except:
@@ -34,5 +34,5 @@ def _send_mail(sender, sender_passwd, receiver, subject, body):
 def send_mail(subject, body):
     if NO_ACCESS in body or OVER_DAY_LIMIT in body:
         return
-    subject = '【New Bing】' + subject
+    subject = '【NBBot】 ' + subject
     _send_mail(MAIL_SENDER, MAIL_SENDER_PASSWD, MAIL_RECEIVER, subject, body)

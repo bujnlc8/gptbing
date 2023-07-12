@@ -9,6 +9,7 @@ import string
 import httpx
 
 from logger import logger
+from send_mail import send_mail
 
 
 class Chatbot:
@@ -130,7 +131,7 @@ class Chatbot:
         """
         # url params
         params = {
-            'bl': 'boq_assistant-bard-web-server_20230706.10_p0',
+            'bl': 'boq_assistant-bard-web-server_20230713.13_p0',
             '_reqid': str(self._reqid),
             'rt': 'c',
         }
@@ -151,8 +152,10 @@ class Chatbot:
             data=data,
             timeout=self.timeout,
         )
+        logger.info('[Bard Response], %s', resp.content.decode())
         chat_data = json.loads(resp.content.splitlines()[3])[0][2]
         if not chat_data:
+            send_mail('Google Bard encountered an error', resp.content)
             return {
                 'content': f'Google Bard encountered an error: {resp.content}.'
             }
@@ -163,7 +166,6 @@ class Chatbot:
                 if json_chat_data[4][0][4]:
                     for img in json_chat_data[4][0][4]:
                         images.append(img[0][0][0])
-        logger.info('[Bard Response], %s', json_chat_data)
         results = {
             'content': json_chat_data[4][0][1][0],
             'conversation_id': json_chat_data[1][0],

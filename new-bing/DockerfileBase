@@ -1,4 +1,4 @@
-FROM sanicframework/sanic:3.11-latest
+FROM python:3.11.4-slim-bookworm
 
 WORKDIR /sanic
 
